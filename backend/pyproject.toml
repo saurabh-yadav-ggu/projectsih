@@ -1,0 +1,17 @@
+[project]
+name = "backend"
+version = "0.1.0"
+description = "Shield AI Backend API Service"
+readme = "README.md"
+authors = [
+    { name = "saurabh-yadav-ggu", email = "saurabhjlpyadav@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = []
+
+[project.scripts]
+backend = "app.main:app"
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
