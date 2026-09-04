@@ -55,6 +55,61 @@ export async function sendMessage(token, threadId, message) {
   return data;
 }
 
+export async function sendMessageStream(token, threadId, message, { onInit, onToken, onDone, onError }) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/chat/stream`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ thread_id: threadId, message })
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({ detail: 'Streaming request failed' }));
+      throw new Error(errData.detail || 'Streaming request failed');
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || ''; // Keep incomplete trailing fragment
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed.startsWith('data: ')) {
+          const jsonStr = trimmed.substring(6).trim();
+          if (!jsonStr) continue;
+          try {
+            const data = JSON.parse(jsonStr);
+            if (data.type === 'init' && onInit) {
+              onInit(data);
+            } else if (data.type === 'token' && onToken) {
+              onToken(data.content);
+            } else if (data.type === 'done' && onDone) {
+              onDone(data);
+            } else if (data.type === 'error' && onError) {
+              onError(new Error(data.error));
+            }
+          } catch (e) {
+            console.error('Error parsing stream packet:', e);
+          }
+        }
+      }
+    }
+  } catch (err) {
+    if (onError) onError(err);
+  }
+}
+
 export async function fetchMemories(token) {
   const res = await fetch(`${API_BASE_URL}/api/memory`, {
     headers: { 'Authorization': `Bearer ${token}` }

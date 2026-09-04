@@ -3,7 +3,7 @@ import { ShieldCheck } from 'lucide-react';
 import './index.css';
 
 import { loginUser, registerUser, fetchCurrentUser } from './api/auth';
-import { createThread, fetchThreads, fetchThreadMessages, deleteThread, sendMessage, uploadDocument } from './api/chat';
+import { createThread, fetchThreads, fetchThreadMessages, deleteThread, sendMessageStream, uploadDocument } from './api/chat';
 
 import AuthModal from './components/auth/AuthModal';
 import Sidebar from './components/layout/Sidebar';
@@ -165,7 +165,7 @@ export default function App() {
       for (const att of currentAttachments) {
         try {
           updateAttachment(att.id, { status: 'uploading', progress: 50 });
-          const res = await uploadDocument(token, att.file, currentTId);
+          await uploadDocument(token, att.file, currentTId);
           updateAttachment(att.id, { status: 'ready', progress: 100 });
         } catch (err) {
           console.error(`Failed to upload file ${att.name}:`, err);
@@ -192,34 +192,66 @@ export default function App() {
       created_at: new Date().toISOString()
     };
 
-    setMessages(prev => [...prev, tempUserMsg]);
+    const assistantMsgId = `asst-${Date.now()}`;
+    const initialAssistantMsg = {
+      id: assistantMsgId,
+      role: 'assistant',
+      content: '',
+      streaming: true,
+      created_at: new Date().toISOString()
+    };
+
+    setMessages(prev => [...prev, tempUserMsg, initialAssistantMsg]);
     setInputValue('');
     clearAttachments();
 
-    // 3. Send query to assistant endpoint
-    try {
-      const res = await sendMessage(token, currentTId, promptMessageText);
-      const assistantMsg = {
-        id: `asst-${Date.now()}`,
-        role: 'assistant',
-        content: res.message,
-        created_at: new Date().toISOString()
-      };
-      setMessages(prev => [...prev, assistantMsg]);
-
-      // Refresh threads list to update title
-      loadThreads();
-    } catch (err) {
-      console.error('Failed to send message:', err);
-      setMessages(prev => [...prev, {
-        id: `err-${Date.now()}`,
-        role: 'assistant',
-        content: `Error: ${err.message || 'Failed to get response from server.'}`,
-        created_at: new Date().toISOString()
-      }]);
-    } finally {
-      setChatLoading(false);
-    }
+    // 3. Initiate Real-Time Streaming via SSE
+    await sendMessageStream(token, currentTId, promptMessageText, {
+      onInit: (data) => {
+        if (data.thread_id && !activeThreadId) {
+          setActiveThreadId(data.thread_id);
+        }
+      },
+      onToken: (tokenChunk) => {
+        setMessages(prev => prev.map(msg => {
+          if (msg.id === assistantMsgId) {
+            return {
+              ...msg,
+              content: msg.content + tokenChunk
+            };
+          }
+          return msg;
+        }));
+      },
+      onDone: (doneData) => {
+        setMessages(prev => prev.map(msg => {
+          if (msg.id === assistantMsgId) {
+            return {
+              ...msg,
+              content: doneData.message || msg.content,
+              streaming: false
+            };
+          }
+          return msg;
+        }));
+        setChatLoading(false);
+        loadThreads();
+      },
+      onError: (err) => {
+        console.error('Streaming error:', err);
+        setMessages(prev => prev.map(msg => {
+          if (msg.id === assistantMsgId) {
+            return {
+              ...msg,
+              content: msg.content ? `${msg.content}\n\n*[Stream interrupted: ${err.message}]*` : `Error: ${err.message}`,
+              streaming: false
+            };
+          }
+          return msg;
+        }));
+        setChatLoading(false);
+      }
+    });
   };
 
   const handleLogin = async (e) => {

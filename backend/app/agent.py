@@ -1,6 +1,7 @@
 import json
 import logging
 from pathlib import Path
+from typing import AsyncGenerator
 from langchain_ollama import ChatOllama
 from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
@@ -85,3 +86,69 @@ async def run_agent_query(
         if messages:
             return str(messages[-1].content)
         return "I processed your request, but generated no output text."
+
+
+async def stream_agent_query(
+    message: str,
+    thread_id: str,
+    memory_context: str = "",
+    document_context: str = ""
+) -> AsyncGenerator[str, None]:
+    """
+    Executes the LangGraph ReAct agent query and streams LLM output tokens asynchronously.
+    """
+    from langchain_core.messages import HumanMessage
+
+    mcp_tools = await get_mcp_tools()
+    all_tools = [*local_tools, *mcp_tools]
+
+    base_prompt = get_base_system_prompt()
+    prompt_parts = [base_prompt]
+
+    if memory_context:
+        prompt_parts.append(memory_context)
+
+    if document_context:
+        doc_prompt_block = (
+            f"\n--- UPLOADED DOCUMENT CONTEXT FOR THIS THREAD ---\n"
+            f"{document_context}\n"
+            f"--- END UPLOADED DOCUMENT CONTEXT ---\n\n"
+            f"CRITICAL INSTRUCTION: The document chunks above are active in this conversation thread. "
+            f"When the user asks 'explain this document', 'summarize', or queries uploaded files, "
+            f"directly review and summarize the provided document context above. Do NOT ask the user to provide the document again."
+        )
+        prompt_parts.append(doc_prompt_block)
+
+    full_prompt = "\n\n".join(prompt_parts)
+
+    llm = ChatOllama(
+        model=settings.OLLAMA_MODEL,
+        base_url=settings.OLLAMA_BASE_URL,
+        temperature=0,
+    )
+
+    async with AsyncSqliteSaver.from_conn_string(str(CHECKPOINT_DB_PATH)) as checkpointer:
+        agent = create_react_agent(
+            model=llm,
+            tools=all_tools,
+            prompt=full_prompt,
+            checkpointer=checkpointer,
+        )
+
+        inputs = {"messages": [HumanMessage(content=message)]}
+        config = {"configurable": {"thread_id": thread_id}}
+
+        async for event in agent.astream_events(inputs, config=config, version="v2"):
+            kind = event.get("event")
+            if kind == "on_chat_model_stream":
+                chunk = event.get("data", {}).get("chunk")
+                if chunk and hasattr(chunk, "content") and chunk.content:
+                    content = chunk.content
+                    if isinstance(content, str):
+                        yield content
+                    elif isinstance(content, list):
+                        for part in content:
+                            if isinstance(part, str):
+                                yield part
+                            elif isinstance(part, dict) and "text" in part:
+                                yield part["text"]

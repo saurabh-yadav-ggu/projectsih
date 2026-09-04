@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Bot, User, Loader2, Cpu, FileText, Image as ImageIcon } from 'lucide-react';
+import { Bot, User, Loader2, Cpu, FileText } from 'lucide-react';
 import MarkdownMessage from './MarkdownMessage';
 
 export default function ChatMessageList({ messages = [], loading = false }) {
@@ -52,6 +52,7 @@ export default function ChatMessageList({ messages = [], loading = false }) {
         }
 
         const attachments = msg.attachments || [];
+        const isStreaming = msg.streaming;
 
         return (
           <div key={msg.id || index} style={{
@@ -90,7 +91,8 @@ export default function ChatMessageList({ messages = [], loading = false }) {
               boxShadow: '0 4px 14px rgba(0, 0, 0, 0.25)',
               display: 'flex',
               flexDirection: 'column',
-              gap: '12px'
+              gap: '12px',
+              position: 'relative'
             }}>
               {/* Render Attachments inside message bubble if present */}
               {attachments.length > 0 && (
@@ -156,14 +158,37 @@ export default function ChatMessageList({ messages = [], loading = false }) {
                   {msg.content}
                 </div>
               ) : (
-                <MarkdownMessage content={msg.content} />
+                <div style={{ position: 'relative' }}>
+                  {msg.content ? (
+                    <MarkdownMessage content={msg.content} />
+                  ) : isStreaming ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#94a3b8', fontSize: '14px' }}>
+                      <Loader2 size={15} style={{ animation: 'spin 1s linear infinite', color: '#f97316' }} />
+                      <span>Shield AI is starting stream...</span>
+                    </div>
+                  ) : null}
+
+                  {/* Pulsing Streaming Cursor */}
+                  {isStreaming && msg.content && (
+                    <span style={{
+                      display: 'inline-block',
+                      width: '8px',
+                      height: '16px',
+                      backgroundColor: '#f97316',
+                      marginLeft: '4px',
+                      borderRadius: '2px',
+                      verticalAlign: 'middle',
+                      animation: 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+                    }} />
+                  )}
+                </div>
               )}
             </div>
           </div>
         );
       })}
 
-      {loading && (
+      {loading && !messages.some(m => m.streaming) && (
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
           <div style={{
             width: '34px',
