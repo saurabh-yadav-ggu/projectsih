@@ -8,17 +8,16 @@ from langchain_chroma import Chroma
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 
+from app.config import settings
+
 # =========================================================
 # Configuration
 # =========================================================
 
-CHROMA_PERSIST_DIRECTORY = "./chroma_db"
-
+CHROMA_PERSIST_DIRECTORY = settings.CHROMA_PERSIST_DIRECTORY
 COLLECTION_NAME = "documents"
-
-EMBEDDING_MODEL = "qwen3-embedding:0.6b"
-
-OLLAMA_BASE_URL = "http://localhost:11434"
+EMBEDDING_MODEL = settings.EMBEDDING_MODEL
+OLLAMA_BASE_URL = settings.OLLAMA_BASE_URL
 
 
 # =========================================================
