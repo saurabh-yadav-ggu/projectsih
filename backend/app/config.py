@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     VISION_MODEL: str = os.getenv("VISION_MODEL", "ministral-3:3b")
     EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "embeddinggemma")
     CHROMA_PERSIST_DIRECTORY: str = os.getenv("CHROMA_PERSIST_DIRECTORY", "./chroma_db")
-    JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "shield-ai-secret-key-production-change-me")
+    JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "shield-ai-super-secret-jwt-token-key-production-32bytes")
 
     class Config:
         env_file = ".env"

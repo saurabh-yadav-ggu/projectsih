@@ -58,19 +58,24 @@ def extract_and_save_memories(db: Session, user_id: int, user_message: str):
         json_end = content.rfind("]") + 1
         if json_start != -1 and json_end > json_start:
             json_str = content[json_start:json_end]
-            items = json.loads(json_str)
-
-            if isinstance(items, list):
-                for item in items:
-                    if isinstance(item, dict) and "key" in item and "value" in item:
-                        key = str(item["key"]).strip()
-                        val = str(item["value"]).strip()
-                        if key and val:
-                            MemoryRepository.save_or_update_memory(db, user_id, key, val)
-                            logger.info(f"Extracted memory for user {user_id}: {key} = {val}")
+            try:
+                items = json.loads(json_str)
+                if isinstance(items, list):
+                    for item in items:
+                        if isinstance(item, dict):
+                            key = item.get("key")
+                            val = item.get("value")
+                            if key and val:
+                                key_str = str(key).strip()
+                                val_str = str(val).strip()
+                                if key_str and val_str:
+                                    MemoryRepository.save_or_update_memory(db, user_id, key_str, val_str)
+                                    logger.info(f"Extracted memory for user {user_id}: {key_str} = {val_str}")
+            except Exception as parse_err:
+                logger.debug(f"Could not parse memory extraction JSON: {parse_err}")
 
     except Exception as e:
-        logger.warning(f"Memory extraction failed non-destructively: {e}")
+        logger.warning(f"Memory extraction completed without new memories: {e}")
 
 
 def generate_and_save_title(db: Session, thread_id: str, user_id: int, user_message: str):
