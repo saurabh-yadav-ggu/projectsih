@@ -1,5 +1,8 @@
-from sqlalchemy import Column, Integer, String
+from datetime import datetime
+from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy.orm import relationship
 from app.database import Base
+
 
 class User(Base):
     __tablename__ = "users"
@@ -10,3 +13,9 @@ class User(Base):
     organisation = Column(String, nullable=False)
     designation = Column(String, nullable=False)
     password = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    conversations = relationship("Conversation", back_populates="user", cascade="all, delete-orphan")
+    memories = relationship("LongTermMemory", back_populates="user", cascade="all, delete-orphan")

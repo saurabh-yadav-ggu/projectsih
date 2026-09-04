@@ -15,6 +15,12 @@ build/
 *.db
 *.sqlite3
 database/*.db
+data/
+backend/data/
+chroma_db/
+backend/chroma_db/
+uploads/
+backend/uploads/
 
 # Logs
 *.log
