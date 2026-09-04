@@ -240,6 +240,16 @@ def add_file(
             file_path
         )
 
+    elif extension in [
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".webp",
+    ]:
+        return add_image_file(
+            file_path
+        )
+
     else:
         raise ValueError(
             f"Unsupported file type: {extension}"

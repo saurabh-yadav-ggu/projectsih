@@ -171,21 +171,27 @@ export default function App() {
   const handleUploadDocument = async (file) => {
     if (!file || uploading) return;
     setUploading(true);
-    setUploadStatus(`Indexing ${file.name}...`);
+    setUploadStatus(`Uploading & Processing ${file.name}...`);
     try {
       const res = await uploadDocument(token, file);
-      const successMsg = `Successfully indexed "${file.name}" (${res.chunks_added} chunks) into RAG knowledge base.`;
+      const isImg = res.is_image;
+      const successMsg = isImg
+        ? `Successfully uploaded image "${file.name}". Saved at: ${res.file_path}`
+        : `Successfully indexed "${file.name}" (${res.chunks_added} chunks) into RAG knowledge base.`;
+
       setUploadStatus(successMsg);
 
       // Append systemic assistant message to chat if active thread exists
       setMessages(prev => [...prev, {
         id: `sys-${Date.now()}`,
         role: 'assistant',
-        content: `📄 **Document Ingested**: ${successMsg}\n\nYou can now ask questions about the contents of this document!`,
+        content: isImg 
+          ? `🖼️ **Image Uploaded**: "${file.name}"\nPath: \`${res.file_path}\`\n\nThe image description has been indexed into your knowledge base. You can also ask me to analyze, describe, or inspect this image!`
+          : `📄 **Document Ingested**: "${file.name}" (${res.chunks_added} chunks)\n\nYou can now ask questions about the contents of this document!`,
         created_at: new Date().toISOString()
       }]);
 
-      setTimeout(() => setUploadStatus(null), 5000);
+      setTimeout(() => setUploadStatus(null), 6000);
     } catch (err) {
       console.error('Failed to upload document:', err);
       const errorMsg = `Upload failed: ${err.message}`;

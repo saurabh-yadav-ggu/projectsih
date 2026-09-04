@@ -57,7 +57,7 @@ export default function ChatInput({
         type="file" 
         ref={fileInputRef} 
         style={{ display: 'none' }} 
-        accept=".pdf,.txt,.md"
+        accept=".pdf,.txt,.md,.png,.jpg,.jpeg,.webp"
         onChange={handleFileChange}
       />
 

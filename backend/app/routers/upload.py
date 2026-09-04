@@ -1,11 +1,14 @@
 import os
-import tempfile
+from pathlib import Path
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, status
 from app.core.security import get_current_user
 from app.models.user import User
 from app.rag import add_file
 
 router = APIRouter(prefix="/api/upload", tags=["upload"])
+
+UPLOAD_DIR = Path(__file__).resolve().parent.parent.parent / "uploads"
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
 @router.post("")
@@ -14,9 +17,10 @@ async def upload_document(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Upload a PDF or text file to ingest into ChromaDB for RAG knowledge base.
+    Upload a document (.pdf, .txt, .md) or image (.png, .jpg, .jpeg, .webp)
+    to ingest into ChromaDB for RAG knowledge base & vision analysis.
     """
-    allowed_extensions = [".pdf", ".txt", ".md"]
+    allowed_extensions = [".pdf", ".txt", ".md", ".png", ".jpg", ".jpeg", ".webp"]
     filename = file.filename or "uploaded_file.txt"
     ext = os.path.splitext(filename)[1].lower()
 
@@ -26,22 +30,28 @@ async def upload_document(
             detail=f"Unsupported file type '{ext}'. Allowed types: {', '.join(allowed_extensions)}"
         )
 
-    # Save to temp file and load into ChromaDB
+    saved_file_path = UPLOAD_DIR / filename
+
     try:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as temp_file:
-            content = await file.read()
-            temp_file.write(content)
-            temp_file_path = temp_file.name
+        content = await file.read()
+        with open(saved_file_path, "wb") as f:
+            f.write(content)
 
-        chunks_added = add_file(temp_file_path)
+        chunks_added = add_file(str(saved_file_path))
+        is_image = ext in [".png", ".jpg", ".jpeg", ".webp"]
 
-        if os.path.exists(temp_file_path):
-            os.remove(temp_file_path)
+        msg = (
+            f"Successfully uploaded and analyzed image '{filename}'."
+            if is_image
+            else f"Successfully indexed '{filename}' into ChromaDB knowledge base."
+        )
 
         return {
-            "message": f"Successfully indexed '{filename}' into ChromaDB knowledge base.",
+            "message": msg,
             "chunks_added": chunks_added,
-            "filename": filename
+            "filename": filename,
+            "file_path": str(saved_file_path),
+            "is_image": is_image
         }
     except Exception as e:
         raise HTTPException(

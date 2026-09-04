@@ -39,7 +39,7 @@ export default function Sidebar({
         type="file" 
         ref={sidebarFileInputRef} 
         style={{ display: 'none' }} 
-        accept=".pdf,.txt,.md"
+        accept=".pdf,.txt,.md,.png,.jpg,.jpeg,.webp"
         onChange={handleFileChange}
       />
 
