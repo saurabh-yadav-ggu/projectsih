@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Bot, User, Loader2, Cpu } from 'lucide-react';
+import { Bot, User, Loader2, Cpu, FileText, Image as ImageIcon } from 'lucide-react';
 import MarkdownMessage from './MarkdownMessage';
 
 export default function ChatMessageList({ messages = [], loading = false }) {
@@ -51,6 +51,8 @@ export default function ChatMessageList({ messages = [], loading = false }) {
           );
         }
 
+        const attachments = msg.attachments || [];
+
         return (
           <div key={msg.id || index} style={{
             display: 'flex',
@@ -85,8 +87,64 @@ export default function ChatMessageList({ messages = [], loading = false }) {
               borderTopLeftRadius: isUser ? '16px' : '4px',
               padding: '16px 20px',
               color: '#e2e8f0',
-              boxShadow: '0 4px 14px rgba(0, 0, 0, 0.25)'
+              boxShadow: '0 4px 14px rgba(0, 0, 0, 0.25)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px'
             }}>
+              {/* Render Attachments inside message bubble if present */}
+              {attachments.length > 0 && (
+                <div style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '8px',
+                  marginBottom: '4px'
+                }}>
+                  {attachments.map((att, i) => {
+                    if (att.type === 'image' && att.previewUrl) {
+                      return (
+                        <div key={i} style={{
+                          width: '120px',
+                          height: '120px',
+                          borderRadius: '10px',
+                          overflow: 'hidden',
+                          border: '1px solid rgba(255, 255, 255, 0.15)',
+                          backgroundColor: '#000'
+                        }}>
+                          <img
+                            src={att.previewUrl}
+                            alt={att.name}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                        </div>
+                      );
+                    }
+                    return (
+                      <div key={i} style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        borderRadius: '8px',
+                        padding: '8px 12px',
+                        fontSize: '12.5px',
+                        color: '#f8fafc'
+                      }}>
+                        <FileText size={16} style={{ color: '#f97316' }} />
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span style={{ fontWeight: 600 }}>{att.name}</span>
+                          <span style={{ fontSize: '10.5px', color: '#94a3b8' }}>
+                            {att.formattedSize || 'Document'}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Message Content */}
               {isUser ? (
                 <div style={{
                   whiteSpace: 'pre-wrap',

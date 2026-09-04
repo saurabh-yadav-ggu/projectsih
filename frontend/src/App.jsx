@@ -9,9 +9,10 @@ import AuthModal from './components/auth/AuthModal';
 import Sidebar from './components/layout/Sidebar';
 import TopBar from './components/layout/TopBar';
 import Footer from './components/layout/Footer';
-import ChatInput from './components/chat/ChatInput';
+import ChatComposer from './components/composer/ChatComposer';
 import QuickTasks from './components/chat/QuickTasks';
 import ChatMessageList from './components/chat/ChatMessageList';
+import { useAttachments } from './hooks/useAttachments';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('Chat');
@@ -34,8 +35,16 @@ export default function App() {
   const [activeThreadId, setActiveThreadId] = useState(null);
   const [messages, setMessages] = useState([]);
   const [chatLoading, setChatLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState(null);
+
+  // Attachment Management Hook
+  const { 
+    attachments, 
+    addFiles, 
+    removeAttachment, 
+    clearAttachments, 
+    updateAttachment 
+  } = useAttachments();
 
   useEffect(() => {
     if (token) {
@@ -89,6 +98,7 @@ export default function App() {
       setThreads(prev => [newT, ...prev]);
       setActiveThreadId(newT.id);
       setMessages([]);
+      clearAttachments();
     } catch (err) {
       console.error('Failed to create thread:', err);
     }
@@ -113,9 +123,21 @@ export default function App() {
     }
   };
 
+  // Direct upload for Sidebar file button or single drop
+  const handleUploadDocumentDirect = async (file) => {
+    if (!file) return;
+    addFiles([file]);
+  };
+
+  const handleRetryAttachment = async (id) => {
+    const att = attachments.find(a => a.id === id);
+    if (!att) return;
+    updateAttachment(id, { status: 'ready', errorMessage: null });
+  };
+
   const handleSendMessage = async (textToSubmit) => {
-    const text = textToSubmit || inputValue;
-    if (!text.trim() || chatLoading) return;
+    const text = textToSubmit !== undefined ? textToSubmit : inputValue;
+    if ((!text.trim() && attachments.length === 0) || chatLoading) return;
 
     let currentTId = activeThreadId;
 
@@ -132,19 +154,51 @@ export default function App() {
       }
     }
 
-    // Optimistic UI update
+    setChatLoading(true);
+
+    // Copy attachments for sending
+    const currentAttachments = [...attachments];
+    let uploadFailed = false;
+
+    // 1. Process and upload attachments if present
+    if (currentAttachments.length > 0) {
+      for (const att of currentAttachments) {
+        try {
+          updateAttachment(att.id, { status: 'uploading', progress: 50 });
+          const res = await uploadDocument(token, att.file, currentTId);
+          updateAttachment(att.id, { status: 'ready', progress: 100 });
+        } catch (err) {
+          console.error(`Failed to upload file ${att.name}:`, err);
+          updateAttachment(att.id, { status: 'error', errorMessage: 'Upload failed' });
+          uploadFailed = true;
+        }
+      }
+    }
+
+    if (uploadFailed) {
+      setChatLoading(false);
+      setUploadStatus('Some attachments failed to upload. Please retry or remove them.');
+      setTimeout(() => setUploadStatus(null), 5000);
+      return; // Do NOT clear message text or attachments on failure!
+    }
+
+    // 2. Optimistic UI update
+    const promptMessageText = text.trim() || (currentAttachments.length > 0 ? "Explain the attached files." : "");
     const tempUserMsg = {
       id: `temp-${Date.now()}`,
       role: 'user',
-      content: text,
+      content: promptMessageText,
+      attachments: currentAttachments,
       created_at: new Date().toISOString()
     };
+
     setMessages(prev => [...prev, tempUserMsg]);
     setInputValue('');
-    setChatLoading(true);
+    clearAttachments();
 
+    // 3. Send query to assistant endpoint
     try {
-      const res = await sendMessage(token, currentTId, text);
+      const res = await sendMessage(token, currentTId, promptMessageText);
       const assistantMsg = {
         id: `asst-${Date.now()}`,
         role: 'assistant',
@@ -153,7 +207,7 @@ export default function App() {
       };
       setMessages(prev => [...prev, assistantMsg]);
 
-      // Refresh threads list to update auto-generated title
+      // Refresh threads list to update title
       loadThreads();
     } catch (err) {
       console.error('Failed to send message:', err);
@@ -165,47 +219,6 @@ export default function App() {
       }]);
     } finally {
       setChatLoading(false);
-    }
-  };
-
-  const handleUploadDocument = async (file) => {
-    if (!file || uploading) return;
-    setUploading(true);
-    setUploadStatus(`Uploading & Processing ${file.name}...`);
-    try {
-      const res = await uploadDocument(token, file, activeThreadId);
-      const isImg = res.is_image;
-      const effectiveThreadId = res.thread_id || activeThreadId;
-
-      if (!activeThreadId && effectiveThreadId) {
-        setActiveThreadId(effectiveThreadId);
-        await loadThreads();
-      }
-
-      const successMsg = isImg
-        ? `Successfully uploaded image "${file.name}".`
-        : `Successfully indexed "${file.name}" (${res.chunks_added} chunks) into thread context.`;
-
-      setUploadStatus(successMsg);
-
-      // Append systemic assistant message to chat
-      setMessages(prev => [...prev, {
-        id: `sys-${Date.now()}`,
-        role: 'assistant',
-        content: isImg 
-          ? `🖼️ **Image Uploaded**: "${file.name}"\n\nThe image description has been indexed into this thread context. You can ask me to explain, analyze, or describe it!`
-          : `📄 **Document Ingested**: "${file.name}" (${res.chunks_added} chunks)\n\nYou can now ask me to explain, summarize, or answer questions about this document!`,
-        created_at: new Date().toISOString()
-      }]);
-
-      setTimeout(() => setUploadStatus(null), 6000);
-    } catch (err) {
-      console.error('Failed to upload document:', err);
-      const errorMsg = `Upload failed: ${err.message}`;
-      setUploadStatus(errorMsg);
-      setTimeout(() => setUploadStatus(null), 5000);
-    } finally {
-      setUploading(false);
     }
   };
 
@@ -241,6 +254,7 @@ export default function App() {
     setThreads([]);
     setActiveThreadId(null);
     setMessages([]);
+    clearAttachments();
   };
 
   if (!token || (token && !user)) {
@@ -282,7 +296,7 @@ export default function App() {
         onSelectThread={handleSelectThread}
         onNewThread={handleNewThread}
         onDeleteThread={handleDeleteThread}
-        onUploadDocument={handleUploadDocument}
+        onUploadDocument={handleUploadDocumentDirect}
       />
 
       {/* MAIN CONTENT AREA */}
@@ -295,14 +309,14 @@ export default function App() {
             top: '70px',
             left: '50%',
             transform: 'translateX(-50%)',
-            backgroundColor: 'var(--bg-button)',
-            border: '1px solid var(--accent-orange)',
+            backgroundColor: '#181b26',
+            border: '1px solid #f97316',
             color: '#fff',
             padding: '8px 16px',
             borderRadius: '20px',
             fontSize: '13px',
             zIndex: 100,
-            boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
+            boxShadow: '0 4px 16px rgba(0,0,0,0.5)'
           }}>
             {uploadStatus}
           </div>
@@ -315,7 +329,7 @@ export default function App() {
           flexDirection: 'column', 
           alignItems: 'center', 
           justifyContent: messages.length === 0 ? 'center' : 'flex-end',
-          padding: '0 24px 24px',
+          padding: '0 24px 10px',
           overflow: 'hidden'
         }}>
           {messages.length === 0 ? (
@@ -324,14 +338,16 @@ export default function App() {
               flexDirection: 'column', 
               alignItems: 'center', 
               justifyContent: 'center',
-              marginBottom: '30px'
+              width: '100%',
+              maxWidth: '850px',
+              marginBottom: '20px'
             }}>
               {/* Logo & Heading */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '40px' }}>
-                <ShieldCheck size={36} color="var(--accent-orange)" strokeWidth={2} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '32px' }}>
+                <ShieldCheck size={36} color="#f97316" strokeWidth={2} />
                 <h1 style={{ 
                   fontFamily: 'var(--font-serif)', 
-                  fontSize: '42px', 
+                  fontSize: '40px', 
                   fontWeight: '500', 
                   color: '#fff',
                   letterSpacing: '-0.01em'
@@ -340,15 +356,17 @@ export default function App() {
                 </h1>
               </div>
 
-              {/* Central Textarea & Input Controls */}
-              <ChatInput 
+              {/* Central ChatGPT-style Composer */}
+              <ChatComposer 
                 inputValue={inputValue} 
                 setInputValue={setInputValue} 
                 activeTab={activeTab} 
                 setActiveTab={setActiveTab} 
+                attachments={attachments}
+                onAddFiles={addFiles}
+                onRemoveAttachment={removeAttachment}
+                onRetryAttachment={handleRetryAttachment}
                 onSendMessage={handleSendMessage}
-                onUploadDocument={handleUploadDocument}
-                uploading={uploading}
                 loading={chatLoading}
               />
 
@@ -369,15 +387,17 @@ export default function App() {
             }}>
               <ChatMessageList messages={messages} loading={chatLoading} />
               
-              <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '12px' }}>
-                <ChatInput 
+              <div style={{ width: '100%', display: 'flex', justifyContent: 'center', paddingTop: '10px' }}>
+                <ChatComposer 
                   inputValue={inputValue} 
                   setInputValue={setInputValue} 
                   activeTab={activeTab} 
                   setActiveTab={setActiveTab} 
+                  attachments={attachments}
+                  onAddFiles={addFiles}
+                  onRemoveAttachment={removeAttachment}
+                  onRetryAttachment={handleRetryAttachment}
                   onSendMessage={handleSendMessage}
-                  onUploadDocument={handleUploadDocument}
-                  uploading={uploading}
                   loading={chatLoading}
                 />
               </div>
