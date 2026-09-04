@@ -8,6 +8,7 @@ from app.models.user import User
 from app.repositories import ThreadRepository, MessageRepository
 from app.schemas.chat import ChatRequest, ChatResponse
 from app.agent import run_agent_query
+from app.rag import retrieve_context
 from app.memory import (
     format_memories_for_prompt,
     extract_and_save_memories,
@@ -46,15 +47,17 @@ async def chat_endpoint(
     )
     ThreadRepository.touch_thread(db, thread_id=thread.id, user_id=current_user.id)
 
-    # 3. Retrieve user memory context for prompt injection
+    # 3. Retrieve user memory context & thread document context
     memory_context = format_memories_for_prompt(db, user_id=current_user.id)
+    document_context = retrieve_context(query=body.message, k=6, thread_id=thread.id)
 
     # 4. Invoke LangGraph ReAct Agent with AsyncSqliteSaver checkpointer
     try:
         response_content = await run_agent_query(
             message=body.message,
             thread_id=thread.id,
-            memory_context=memory_context
+            memory_context=memory_context,
+            document_context=document_context
         )
     except Exception as e:
         logger.error(f"Error during agent execution: {e}")
@@ -68,7 +71,7 @@ async def chat_endpoint(
         content=response_content
     )
 
-    # 6. Schedule automated title generation and memory extraction as non-blocking background tasks
+    # 6. Schedule automated title generation and memory extraction as background tasks
     background_tasks.add_task(
         generate_and_save_title,
         db=db,
@@ -83,7 +86,7 @@ async def chat_endpoint(
         user_message=body.message
     )
 
-    # Fetch updated thread to return updated title if changed
+    # Fetch updated thread title if changed
     updated_thread = ThreadRepository.get_thread(db, thread_id=thread.id, user_id=current_user.id)
     title = updated_thread.title if updated_thread else thread.title
 

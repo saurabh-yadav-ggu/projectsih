@@ -28,9 +28,15 @@ def get_base_system_prompt() -> str:
         return "You are a helpful AI assistant."
 
 
-async def run_agent_query(message: str, thread_id: str, memory_context: str = "") -> str:
+async def run_agent_query(
+    message: str,
+    thread_id: str,
+    memory_context: str = "",
+    document_context: str = ""
+) -> str:
     """
-    Executes the LangGraph ReAct agent query using AsyncSqliteSaver context manager.
+    Executes the LangGraph ReAct agent query using AsyncSqliteSaver checkpointer.
+    Includes persistent user memories and thread document context in the prompt.
     """
     from langchain_core.messages import HumanMessage
 
@@ -38,7 +44,23 @@ async def run_agent_query(message: str, thread_id: str, memory_context: str = ""
     all_tools = [*local_tools, *mcp_tools]
 
     base_prompt = get_base_system_prompt()
-    full_prompt = f"{base_prompt}\n{memory_context}" if memory_context else base_prompt
+    prompt_parts = [base_prompt]
+
+    if memory_context:
+        prompt_parts.append(memory_context)
+
+    if document_context:
+        doc_prompt_block = (
+            f"\n--- UPLOADED DOCUMENT CONTEXT FOR THIS THREAD ---\n"
+            f"{document_context}\n"
+            f"--- END UPLOADED DOCUMENT CONTEXT ---\n\n"
+            f"CRITICAL INSTRUCTION: The document chunks above are active in this conversation thread. "
+            f"When the user asks 'explain this document', 'summarize', or queries uploaded files, "
+            f"directly review and summarize the provided document context above. Do NOT ask the user to provide the document again."
+        )
+        prompt_parts.append(doc_prompt_block)
+
+    full_prompt = "\n\n".join(prompt_parts)
 
     llm = ChatOllama(
         model=settings.OLLAMA_MODEL,

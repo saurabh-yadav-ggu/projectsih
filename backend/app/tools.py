@@ -4,7 +4,7 @@ from app.vision import analyze_image
 
 
 @tool
-def search_knowledge_base(query: str) -> str:
+def search_knowledge_base(query: str, thread_id: str = "") -> str:
     """
     Search the internal knowledge base.
 
@@ -13,7 +13,7 @@ def search_knowledge_base(query: str) -> str:
     manuals, PDFs, reports, or other indexed data.
     """
     try:
-        context = retrieve_context(query=query, k=4)
+        context = retrieve_context(query=query, k=6, thread_id=thread_id if thread_id else None)
         return context
     except Exception as e:
         return f"Knowledge base search failed: {str(e)}"

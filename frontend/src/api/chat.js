@@ -73,9 +73,12 @@ export async function deleteMemory(token, memoryId) {
   return true;
 }
 
-export async function uploadDocument(token, file) {
+export async function uploadDocument(token, file, threadId = null) {
   const formData = new FormData();
   formData.append('file', file);
+  if (threadId) {
+    formData.append('thread_id', threadId);
+  }
 
   const res = await fetch(`${API_BASE_URL}/api/upload`, {
     method: 'POST',

@@ -173,21 +173,28 @@ export default function App() {
     setUploading(true);
     setUploadStatus(`Uploading & Processing ${file.name}...`);
     try {
-      const res = await uploadDocument(token, file);
+      const res = await uploadDocument(token, file, activeThreadId);
       const isImg = res.is_image;
+      const effectiveThreadId = res.thread_id || activeThreadId;
+
+      if (!activeThreadId && effectiveThreadId) {
+        setActiveThreadId(effectiveThreadId);
+        await loadThreads();
+      }
+
       const successMsg = isImg
-        ? `Successfully uploaded image "${file.name}". Saved at: ${res.file_path}`
-        : `Successfully indexed "${file.name}" (${res.chunks_added} chunks) into RAG knowledge base.`;
+        ? `Successfully uploaded image "${file.name}".`
+        : `Successfully indexed "${file.name}" (${res.chunks_added} chunks) into thread context.`;
 
       setUploadStatus(successMsg);
 
-      // Append systemic assistant message to chat if active thread exists
+      // Append systemic assistant message to chat
       setMessages(prev => [...prev, {
         id: `sys-${Date.now()}`,
         role: 'assistant',
         content: isImg 
-          ? `🖼️ **Image Uploaded**: "${file.name}"\nPath: \`${res.file_path}\`\n\nThe image description has been indexed into your knowledge base. You can also ask me to analyze, describe, or inspect this image!`
-          : `📄 **Document Ingested**: "${file.name}" (${res.chunks_added} chunks)\n\nYou can now ask questions about the contents of this document!`,
+          ? `🖼️ **Image Uploaded**: "${file.name}"\n\nThe image description has been indexed into this thread context. You can ask me to explain, analyze, or describe it!`
+          : `📄 **Document Ingested**: "${file.name}" (${res.chunks_added} chunks)\n\nYou can now ask me to explain, summarize, or answer questions about this document!`,
         created_at: new Date().toISOString()
       }]);
 
