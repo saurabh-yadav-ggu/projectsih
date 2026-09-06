@@ -55,7 +55,12 @@ export async function sendMessage(token, threadId, message) {
   return data;
 }
 
-export async function sendMessageStream(token, threadId, message, { onInit, onToken, onDone, onError }) {
+export async function sendMessageStream(
+  token,
+  threadId,
+  message,
+  { onInit, onToken, onToolStart, onToolEnd, onDone, onError, onAbort, signal } = {}
+) {
   try {
     const res = await fetch(`${API_BASE_URL}/api/chat/stream`, {
       method: 'POST',
@@ -63,7 +68,8 @@ export async function sendMessageStream(token, threadId, message, { onInit, onTo
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({ thread_id: threadId, message })
+      body: JSON.stringify({ thread_id: threadId || null, message }),
+      signal
     });
 
     if (!res.ok) {
@@ -72,10 +78,12 @@ export async function sendMessageStream(token, threadId, message, { onInit, onTo
     }
 
     const reader = res.body.getReader();
-    const decoder = new TextDecoder();
+    const decoder = new TextDecoder('utf-8');
     let buffer = '';
 
     while (true) {
+      if (signal?.aborted) break;
+
       const { done, value } = await reader.read();
       if (done) break;
 
@@ -85,27 +93,36 @@ export async function sendMessageStream(token, threadId, message, { onInit, onTo
 
       for (const line of lines) {
         const trimmed = line.trim();
-        if (trimmed.startsWith('data: ')) {
-          const jsonStr = trimmed.substring(6).trim();
-          if (!jsonStr) continue;
-          try {
-            const data = JSON.parse(jsonStr);
-            if (data.type === 'init' && onInit) {
-              onInit(data);
-            } else if (data.type === 'token' && onToken) {
-              onToken(data.content);
-            } else if (data.type === 'done' && onDone) {
-              onDone(data);
-            } else if (data.type === 'error' && onError) {
-              onError(new Error(data.error));
-            }
-          } catch (e) {
-            console.error('Error parsing stream packet:', e);
+        if (!trimmed.startsWith('data: ')) continue;
+
+        const jsonStr = trimmed.substring(6).trim();
+        if (!jsonStr) continue;
+
+        try {
+          const data = JSON.parse(jsonStr);
+          if (data.type === 'init' && onInit) {
+            onInit(data);
+          } else if (data.type === 'token' && onToken) {
+            onToken(data.content);
+          } else if (data.type === 'tool_start' && onToolStart) {
+            onToolStart(data);
+          } else if (data.type === 'tool_end' && onToolEnd) {
+            onToolEnd(data);
+          } else if (data.type === 'done' && onDone) {
+            onDone(data);
+          } else if (data.type === 'error' && onError) {
+            onError(new Error(data.error));
           }
+        } catch (e) {
+          console.warn('Error parsing stream packet:', e);
         }
       }
     }
   } catch (err) {
+    if (err.name === 'AbortError' || signal?.aborted) {
+      if (onAbort) onAbort();
+      return;
+    }
     if (onError) onError(err);
   }
 }
@@ -145,4 +162,15 @@ export async function uploadDocument(token, file, threadId = null) {
   const data = await res.json();
   if (!res.ok) throw new Error(data.detail || 'Failed to upload document');
   return data;
+}
+
+export async function downloadDocument(token, filePath) {
+  const res = await fetch(`${API_BASE_URL}/api/documents/download?path=${encodeURIComponent(filePath)}`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.detail || 'Failed to download document');
+  }
+  return res;
 }

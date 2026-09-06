@@ -21,6 +21,8 @@ chroma_db/
 backend/chroma_db/
 uploads/
 backend/uploads/
+backend/app/mcp/out/
+backend/*.xlsx
 
 # Logs
 *.log

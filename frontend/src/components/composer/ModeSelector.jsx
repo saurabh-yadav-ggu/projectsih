@@ -38,6 +38,7 @@ export default function ModeSelector({ activeTab, setActiveTab }) {
             {isSelected && (
               <div style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#f97316' }} />
             )}
+            <Icon size={13} style={{ color: isSelected ? '#f97316' : '#94a3b8' }} />
             <span>{id}</span>
           </button>
         );

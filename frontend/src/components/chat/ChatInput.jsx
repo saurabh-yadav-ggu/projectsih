@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Plus, ChevronDown, Mic, ArrowUp, Loader2, Upload } from 'lucide-react';
+import { Plus, ChevronDown, Mic, ArrowUp, Loader2 } from 'lucide-react';
 
 export default function ChatInput({ 
   inputValue, 

@@ -14,6 +14,7 @@ export default function ChatComposer({
   onRemoveAttachment,
   onRetryAttachment,
   onSendMessage,
+  onStop,
   loading
 }) {
   const textareaRef = useRef(null);
@@ -50,6 +51,12 @@ export default function ChatComposer({
   };
 
   const handleKeyDown = (e) => {
+    if (e.key === 'Escape' && loading && onStop) {
+      e.preventDefault();
+      onStop();
+      return;
+    }
+
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       const canSend = (inputValue.trim().length > 0 || attachments.length > 0) && !loading;
@@ -114,14 +121,14 @@ export default function ChatComposer({
         width: 'calc(100% - 32px)',
         maxWidth: '850px',
         margin: '0 auto 20px auto',
-        backgroundColor: '#15171D',
-        border: `1px solid ${isDragging ? '#f97316' : 'rgba(255, 255, 255, 0.09)'}`,
+        backgroundColor: '#212121',
+        border: `1px solid ${isDragging ? '#f97316' : '#383838'}`,
         borderRadius: '20px',
         padding: '14px 18px',
         display: 'flex',
         flexDirection: 'column',
         position: 'relative',
-        boxShadow: isDragging ? '0 0 20px rgba(249, 115, 22, 0.25)' : '0 8px 32px rgba(0, 0, 0, 0.4)',
+        boxShadow: isDragging ? '0 0 20px rgba(249, 115, 22, 0.35)' : '0 8px 32px rgba(0, 0, 0, 0.6)',
         transition: 'border 0.2s ease, box-shadow 0.2s ease',
         flexShrink: 0
       }}
@@ -172,21 +179,19 @@ export default function ChatComposer({
         onChange={(e) => setInputValue(e.target.value)}
         onKeyDown={handleKeyDown}
         onPaste={handlePaste}
-        placeholder="Ask Shield AI anything..."
-        disabled={loading}
+        placeholder={loading ? "Shield AI is generating... (Esc to stop)" : "Ask Shield AI anything..."}
         rows={1}
         style={{
           width: '100%',
           backgroundColor: 'transparent',
-          color: '#f8fafc',
+          color: '#ffffff',
           fontSize: '15px',
           lineHeight: '1.6',
           border: 'none',
           outline: 'none',
           resize: 'none',
           padding: '2px 0',
-          fontFamily: 'inherit',
-          opacity: loading ? 0.6 : 1
+          fontFamily: 'inherit'
         }}
       />
 
@@ -196,6 +201,7 @@ export default function ChatComposer({
         setActiveTab={setActiveTab}
         onOpenPicker={handleOpenPicker}
         onSend={() => canSend && onSendMessage()}
+        onStop={onStop}
         canSend={canSend}
         loading={loading}
         attachmentCount={attachments.length}

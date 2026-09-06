@@ -23,6 +23,7 @@ dependencies = [
     "langchain-chroma",
     "langchain-text-splitters",
     "langchain-mcp-adapters",
+    "mcp-docgen",
     "langgraph",
     "pypdf",
     "python-dotenv",

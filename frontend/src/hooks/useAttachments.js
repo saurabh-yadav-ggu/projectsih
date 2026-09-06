@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 export function formatBytes(bytes, decimals = 1) {
   if (!bytes || bytes === 0) return '0 B';
@@ -24,11 +24,16 @@ export function detectAttachmentType(file) {
 
 export function useAttachments() {
   const [attachments, setAttachments] = useState([]);
+  const attachmentsRef = useRef(attachments);
+
+  useEffect(() => {
+    attachmentsRef.current = attachments;
+  }, [attachments]);
 
   // Revoke object URLs on component unmount
   useEffect(() => {
     return () => {
-      attachments.forEach(att => {
+      attachmentsRef.current.forEach(att => {
         if (att.previewUrl) {
           URL.revokeObjectURL(att.previewUrl);
         }

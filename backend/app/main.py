@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.database import init_db
-from app.routers import auth, threads, chat, memory, upload
+from app.routers import auth, threads, chat, memory, upload, documents
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -42,6 +42,7 @@ app.include_router(threads.router)
 app.include_router(chat.router)
 app.include_router(memory.router)
 app.include_router(upload.router)
+app.include_router(documents.router)
 
 
 @app.get("/")

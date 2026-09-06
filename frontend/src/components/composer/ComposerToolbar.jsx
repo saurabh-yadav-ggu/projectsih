@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Mic, ArrowUp, Loader2, Paperclip } from 'lucide-react';
+import { Plus, Mic, ArrowUp, Square, Paperclip } from 'lucide-react';
 import ModeSelector from './ModeSelector';
 import ModelSelector from './ModelSelector';
 import AttachmentMenu from './AttachmentMenu';
@@ -9,6 +9,7 @@ export default function ComposerToolbar({
   setActiveTab,
   onOpenPicker,
   onSend,
+  onStop,
   canSend,
   loading,
   attachmentCount
@@ -108,33 +109,55 @@ export default function ComposerToolbar({
           <Mic size={18} className={recording ? 'animate-pulse' : ''} />
         </button>
 
-        {/* Send Button */}
-        <button
-          onClick={onSend}
-          disabled={!canSend || loading}
-          aria-label="Send message"
-          title={canSend ? 'Send message' : 'Type a message or attach a file'}
-          style={{
-            width: '34px',
-            height: '34px',
-            borderRadius: '10px',
-            backgroundColor: canSend && !loading ? '#f97316' : '#1e2235',
-            color: canSend && !loading ? '#0f1117' : '#64748b',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            border: 'none',
-            cursor: canSend && !loading ? 'pointer' : 'not-allowed',
-            transition: 'all 0.15s ease',
-            boxShadow: canSend && !loading ? '0 2px 10px rgba(249, 115, 22, 0.3)' : 'none'
-          }}
-        >
-          {loading ? (
-            <Loader2 size={18} className="animate-spin" style={{ animation: 'spin 1s linear infinite' }} />
-          ) : (
+        {/* Send or Stop Button */}
+        {loading ? (
+          <button
+            type="button"
+            onClick={onStop}
+            aria-label="Stop generation"
+            title="Stop generation (Esc)"
+            style={{
+              width: '34px',
+              height: '34px',
+              borderRadius: '10px',
+              backgroundColor: '#181b26',
+              border: '1px solid #f97316',
+              color: '#f97316',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+              boxShadow: '0 0 14px rgba(249, 115, 22, 0.4)'
+            }}
+          >
+            <Square size={13} fill="#f97316" />
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={onSend}
+            disabled={!canSend}
+            aria-label="Send message"
+            title={canSend ? 'Send message' : 'Type a message or attach a file'}
+            style={{
+              width: '34px',
+              height: '34px',
+              borderRadius: '10px',
+              backgroundColor: canSend ? '#f97316' : '#1e2235',
+              color: canSend ? '#0f1117' : '#64748b',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: 'none',
+              cursor: canSend ? 'pointer' : 'not-allowed',
+              transition: 'all 0.15s ease',
+              boxShadow: canSend ? '0 2px 10px rgba(249, 115, 22, 0.3)' : 'none'
+            }}
+          >
             <ArrowUp size={18} strokeWidth={2.5} />
-          )}
-        </button>
+          </button>
+        )}
       </div>
     </div>
   );
