@@ -1,12 +1,46 @@
-import React from 'react';
-import { Plus, ChevronDown, Mic, ArrowUp } from 'lucide-react';
+import React, { useRef } from 'react';
+import { Plus, ChevronDown, Mic, ArrowUp, Loader2 } from 'lucide-react';
 
 export default function ChatInput({ 
   inputValue, 
   setInputValue, 
   activeTab, 
-  setActiveTab 
+  setActiveTab,
+  onSendMessage,
+  onUploadDocument,
+  uploading,
+  loading
 }) {
+  const fileInputRef = useRef(null);
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (inputValue.trim() && !loading) {
+        onSendMessage(inputValue);
+      }
+    }
+  };
+
+  const handleSendClick = () => {
+    if (inputValue.trim() && !loading) {
+      onSendMessage(inputValue);
+    }
+  };
+
+  const handlePlusClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file && onUploadDocument) {
+      onUploadDocument(file);
+    }
+    // reset input value so re-selecting same file triggers onChange
+    e.target.value = '';
+  };
+
   return (
     <div style={{ 
       width: '100%', 
@@ -19,10 +53,20 @@ export default function ChatInput({
       flexDirection: 'column',
       gap: '16px'
     }}>
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        style={{ display: 'none' }} 
+        accept=".pdf,.txt,.md,.png,.jpg,.jpeg,.webp"
+        onChange={handleFileChange}
+      />
+
       <textarea 
         value={inputValue}
         onChange={(e) => setInputValue(e.target.value)}
+        onKeyDown={handleKeyDown}
         placeholder="Task Hivemind swarm or query defense systems..."
+        disabled={loading}
         style={{
           width: '100%',
           minHeight: '60px',
@@ -32,23 +76,29 @@ export default function ChatInput({
           color: '#fff',
           backgroundColor: 'transparent',
           border: 'none',
-          outline: 'none'
+          outline: 'none',
+          opacity: loading ? 0.6 : 1
         }}
       />
 
       {/* Input Controls */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button style={{ 
-            width: '32px', height: '32px', 
-            borderRadius: '8px', 
-            backgroundColor: 'var(--bg-button)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: 'var(--text-primary)',
-            border: 'none',
-            cursor: 'pointer'
-          }}>
-            <Plus size={16} />
+          <button 
+            onClick={handlePlusClick}
+            disabled={uploading}
+            title="Upload document (.pdf, .txt, .md) to RAG Knowledge Base"
+            style={{ 
+              width: '32px', height: '32px', 
+              borderRadius: '8px', 
+              backgroundColor: 'var(--bg-button)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: uploading ? 'var(--accent-orange)' : 'var(--text-primary)',
+              border: 'none',
+              cursor: uploading ? 'wait' : 'pointer'
+            }}
+          >
+            {uploading ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <Plus size={16} />}
           </button>
           
           <div style={{ 
@@ -104,16 +154,22 @@ export default function ChatInput({
           <button style={{ color: 'var(--text-muted)', backgroundColor: 'transparent', border: 'none', cursor: 'pointer' }}>
             <Mic size={20} />
           </button>
-          <button style={{ 
-            width: '32px', height: '32px', 
-            borderRadius: '8px', 
-            backgroundColor: 'var(--bg-button)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: 'var(--text-primary)',
-            border: 'none',
-            cursor: 'pointer'
-          }}>
-            <ArrowUp size={16} />
+          <button 
+            onClick={handleSendClick}
+            disabled={loading || !inputValue.trim()}
+            style={{ 
+              width: '32px', height: '32px', 
+              borderRadius: '8px', 
+              backgroundColor: inputValue.trim() && !loading ? 'var(--accent-orange)' : 'var(--bg-button)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: inputValue.trim() && !loading ? '#000' : 'var(--text-primary)',
+              border: 'none',
+              cursor: loading || !inputValue.trim() ? 'not-allowed' : 'pointer',
+              opacity: loading ? 0.7 : 1,
+              transition: 'all 0.2s ease'
+            }}
+          >
+            {loading ? <Loader2 size={16} className="animate-spin" style={{ animation: 'spin 1s linear infinite' }} /> : <ArrowUp size={16} />}
           </button>
         </div>
       </div>

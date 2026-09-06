@@ -6,3 +6,16 @@ pyjwt
 pydantic
 pydantic-settings
 email-validator
+langchain
+langchain-core
+langchain-community
+langchain-ollama
+langchain-chroma
+langchain-text-splitters
+langchain-mcp-adapters
+mcp-docgen
+langgraph
+langgraph-checkpoint-sqlite
+pypdf
+python-dotenv
+requests

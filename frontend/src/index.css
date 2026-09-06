@@ -1,19 +1,21 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 :root {
-  --bg-main: #0c0d10;
-  --bg-sidebar: #101114;
-  --bg-input: #15161a;
-  --bg-hover: #1a1c23;
-  --bg-button: #1e2025;
-  --text-primary: #e2e8f0;
-  --text-secondary: #8b909a;
-  --text-muted: #5e626b;
-  --accent-orange: #f59e0b;
-  --accent-green: #10b981;
-  --border-color: #1e2025;
-  --font-sans: 'Inter', system-ui, sans-serif;
-  --font-serif: 'Playfair Display', serif;
+  --bg-main: #000000;
+  --bg-sidebar: #08080a;
+  --bg-card: #141416;
+  --bg-input: #212121;
+  --bg-hover: #2a2a2e;
+  --bg-button: #262629;
+  --text-primary: #ffffff;
+  --text-secondary: #a1a1aa;
+  --text-muted: #71717a;
+  --accent-orange: #f97316;
+  --accent-blue: #38bdf8;
+  --accent-green: #22c55e;
+  --border-color: #27272a;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
 }
 
 * {
@@ -46,7 +48,7 @@ button {
   border: none;
   background: none;
   outline: none;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   color: inherit;
 }
 
@@ -58,7 +60,7 @@ input, textarea {
   color: inherit;
 }
 
-/* Custom Scrollbars */
+/* Custom IDE Scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -67,31 +69,22 @@ input, textarea {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #333;
+  background: #272c3d;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  background: #3b4259;
 }
 
-/* Utility Classes */
-.flex { display: flex; }
-.flex-col { display: flex; flex-direction: column; }
-.items-center { align-items: center; }
-.justify-between { justify-content: space-between; }
-.justify-center { justify-content: center; }
-.gap-2 { gap: 0.5rem; }
-.gap-3 { gap: 0.75rem; }
-.gap-4 { gap: 1rem; }
-.w-full { width: 100%; }
-.nav-item {
-  transition: all 0.2s ease;
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
-.nav-item:hover {
-  background-color: var(--bg-hover) !important;
-  color: var(--text-primary) !important;
+.animate-spin {
+  animation: spin 1s linear infinite;
 }
+
 .app-container {
   display: flex;
   width: 100vw;
@@ -100,7 +93,7 @@ input, textarea {
 }
 
 .sidebar {
-  width: 260px;
+  width: 270px;
   background-color: var(--bg-sidebar);
   border-right: 1px solid var(--border-color);
   display: flex;
@@ -114,4 +107,5 @@ input, textarea {
   flex-direction: column;
   height: 100%;
   position: relative;
+  background-color: var(--bg-main);
 }

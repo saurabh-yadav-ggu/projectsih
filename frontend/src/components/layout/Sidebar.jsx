@@ -1,25 +1,48 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { 
-  ShieldCheck, Plus, Filter, Download, LayoutTemplate, Settings, Command 
+  ShieldCheck, Plus, Filter, Download, LayoutTemplate, Settings, Command, Trash2, MessageSquare, FileText
 } from 'lucide-react';
 
-export default function Sidebar({ user, onLogout, showAccountMenu, setShowAccountMenu }) {
+export default function Sidebar({ 
+  user, 
+  onLogout, 
+  showAccountMenu, 
+  setShowAccountMenu,
+  threads = [],
+  activeThreadId,
+  onSelectThread,
+  onNewThread,
+  onDeleteThread,
+  onUploadDocument
+}) {
+  const sidebarFileInputRef = useRef(null);
+
   const userInitials = user?.name
     ? user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
     : 'U';
 
-  const recentTasks = [
-    { text: 'V-BAT Swarm Border Reconnaissance', color: 'var(--accent-green)' },
-    { text: 'GPS-Denied Waypoint Nav Protocol', color: 'var(--accent-orange)' },
-    { text: 'Counter-sUAS Interceptor Mesh Test', color: 'var(--text-muted)' },
-    { text: 'Tactical Edge Vision Model v8.4 Eval', color: 'var(--text-muted)' },
-    { text: 'Autonomous EW Detection Envelope', color: 'var(--text-muted)' },
-    { text: 'Fighter-Jet Co-Pilot Swarm Logic', color: 'var(--text-muted)' },
-    { text: 'Low-Altitude LIDAR Obstacle Avoidance', color: 'var(--text-muted)' }
-  ];
+  const handleDocumentsClick = () => {
+    sidebarFileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file && onUploadDocument) {
+      onUploadDocument(file);
+    }
+    e.target.value = '';
+  };
 
   return (
     <div className="sidebar">
+      <input 
+        type="file" 
+        ref={sidebarFileInputRef} 
+        style={{ display: 'none' }} 
+        accept=".pdf,.txt,.md,.png,.jpg,.jpeg,.webp"
+        onChange={handleFileChange}
+      />
+
       {/* Sidebar Header */}
       <div style={{ padding: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -42,19 +65,22 @@ export default function Sidebar({ user, onLogout, showAccountMenu, setShowAccoun
 
       {/* New Button */}
       <div style={{ padding: '0 24px', marginBottom: '24px' }}>
-        <button style={{ 
-          width: '100%', 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'space-between',
-          backgroundColor: 'var(--bg-button)',
-          padding: '10px 14px',
-          borderRadius: '8px',
-          color: '#fff',
-          fontSize: '14px',
-          fontWeight: '500',
-          cursor: 'pointer'
-        }}>
+        <button 
+          onClick={onNewThread}
+          style={{ 
+            width: '100%', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between',
+            backgroundColor: 'var(--bg-button)',
+            padding: '10px 14px',
+            borderRadius: '8px',
+            color: '#fff',
+            fontSize: '14px',
+            fontWeight: '500',
+            cursor: 'pointer'
+          }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Plus size={16} />
             <span>New</span>
@@ -68,7 +94,19 @@ export default function Sidebar({ user, onLogout, showAccountMenu, setShowAccoun
 
       {/* Navigation Links */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', padding: '0 16px' }}>
-        {['Documents', 'Projects'].map(item => (
+        <div 
+          onClick={handleDocumentsClick}
+          style={{ padding: '8px 12px', fontSize: '14px', color: '#d1d5db', cursor: 'pointer', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }} 
+          className="nav-item"
+          title="Upload document (.pdf, .txt, .md) to RAG"
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <FileText size={16} color="var(--accent-orange)" />
+            <span>Documents</span>
+          </div>
+          <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Upload</span>
+        </div>
+        {['Projects'].map(item => (
           <div key={item} style={{ padding: '8px 12px', fontSize: '14px', color: '#d1d5db', cursor: 'pointer', borderRadius: '6px' }} className="nav-item">
             {item}
           </div>
@@ -97,22 +135,58 @@ export default function Sidebar({ user, onLogout, showAccountMenu, setShowAccoun
           <Filter size={14} color="var(--text-muted)" style={{ cursor: 'pointer' }} />
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', padding: '0 16px', overflowY: 'auto', flex: 1 }}>
-          {recentTasks.map((task, i) => (
-            <div key={i} style={{ 
-              padding: '8px 12px', 
-              fontSize: '13px', 
-              color: 'var(--text-secondary)', 
-              cursor: 'pointer', 
-              borderRadius: '6px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              flexShrink: 0
-            }} className="nav-item">
-              <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: task.color, flexShrink: 0 }} />
-              <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{task.text}</span>
+          {threads.length === 0 ? (
+            <div style={{ padding: '12px', fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center' }}>
+              No previous chats
             </div>
-          ))}
+          ) : (
+            threads.map((t) => {
+              const isActive = t.id === activeThreadId;
+              return (
+                <div 
+                  key={t.id} 
+                  onClick={() => onSelectThread(t.id)}
+                  style={{ 
+                    padding: '8px 12px', 
+                    fontSize: '13px', 
+                    color: isActive ? '#fff' : 'var(--text-secondary)', 
+                    backgroundColor: isActive ? 'var(--bg-hover)' : 'transparent',
+                    cursor: 'pointer', 
+                    borderRadius: '6px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '8px',
+                    flexShrink: 0
+                  }} 
+                  className="nav-itemGroup group"
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
+                    <MessageSquare size={14} color={isActive ? 'var(--accent-orange)' : 'var(--text-muted)'} style={{ flexShrink: 0 }} />
+                    <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.title || 'New conversation'}</span>
+                  </div>
+                  {onDeleteThread && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteThread(t.id);
+                      }}
+                      style={{
+                        color: 'var(--text-muted)',
+                        opacity: 0.6,
+                        padding: '2px',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                      }}
+                      title="Delete thread"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  )}
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
 
