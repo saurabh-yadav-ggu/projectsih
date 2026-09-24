@@ -53,7 +53,7 @@ export default function ImageAttachment({ attachment, onRemove, onRetry }) {
           alignItems: 'center',
           justifyContent: 'center',
           gap: '4px',
-          color: '#f97316'
+          color: '#3b82f6'
         }}>
           <Loader2 size={18} className="animate-spin" style={{ animation: 'spin 1s linear infinite' }} />
           <span style={{ fontSize: '10px', fontWeight: 600, color: '#f8fafc' }}>

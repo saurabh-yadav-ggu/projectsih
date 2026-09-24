@@ -45,7 +45,7 @@ export default function ModelSelector() {
         }}
         title="Model configuration"
       >
-        <Cpu size={14} style={{ color: '#f97316' }} />
+        <Cpu size={14} style={{ color: '#3b82f6' }} />
         <span style={{ color: '#f8fafc', fontWeight: 500 }}>{selectedModel}</span>
         <ChevronDown size={13} style={{ color: '#64748b' }} />
       </button>
@@ -56,14 +56,14 @@ export default function ModelSelector() {
           bottom: '100%',
           right: '0',
           marginBottom: '8px',
-          backgroundColor: '#181b26',
-          border: '1px solid #282c3f',
+          backgroundColor: '#0a0a0d',
+          border: '1px solid #1a1a20',
           borderRadius: '12px',
           padding: '6px',
           display: 'flex',
           flexDirection: 'column',
           gap: '4px',
-          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)',
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.7)',
           zIndex: 50,
           minWidth: '240px'
         }}>
@@ -80,7 +80,7 @@ export default function ModelSelector() {
                 justifyContent: 'space-between',
                 padding: '8px 10px',
                 borderRadius: '8px',
-                backgroundColor: selectedModel === m.name ? '#232738' : 'transparent',
+                backgroundColor: selectedModel === m.name ? '#172554' : 'transparent',
                 cursor: 'pointer',
                 textAlign: 'left',
                 border: 'none'
@@ -90,7 +90,7 @@ export default function ModelSelector() {
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <div style={{ fontSize: '13px', fontWeight: 500, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <span>{m.name}</span>
-                  <span style={{ fontSize: '10px', color: '#f97316', border: '1px solid rgba(249,115,22,0.3)', borderRadius: '4px', padding: '1px 4px' }}>
+                  <span style={{ fontSize: '10px', color: '#60a5fa', border: '1px solid rgba(29,78,216,0.4)', borderRadius: '4px', padding: '1px 4px' }}>
                     {m.tag}
                   </span>
                 </div>

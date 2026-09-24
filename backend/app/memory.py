@@ -4,8 +4,8 @@ import re
 from pathlib import Path
 from typing import List, Dict, Any
 from sqlalchemy.orm import Session
-from langchain_ollama import ChatOllama
 from app.config import settings
+from app.core.llm import get_llm
 from app.repositories import MemoryRepository, ThreadRepository
 
 logger = logging.getLogger("app.memory")
@@ -59,11 +59,7 @@ def extract_and_save_memories(db: Session, user_id: int, user_message: str):
         prompt_tmpl = prompts.get("memory_extraction_prompt", "")
         prompt = prompt_tmpl.format(message=user_message)
 
-        llm = ChatOllama(
-            model=settings.OLLAMA_MODEL,
-            base_url=settings.OLLAMA_BASE_URL,
-            temperature=0
-        )
+        llm = get_llm(temperature=0)
 
         response = llm.invoke(prompt)
         raw_content = response.content.strip()
@@ -155,11 +151,7 @@ def generate_and_save_title(db: Session, thread_id: str, user_id: int, user_mess
         prompt_tmpl = prompts.get("title_generation_prompt", "")
         prompt = prompt_tmpl.format(message=user_message)
 
-        llm = ChatOllama(
-            model=settings.OLLAMA_MODEL,
-            base_url=settings.OLLAMA_BASE_URL,
-            temperature=0.3
-        )
+        llm = get_llm(temperature=0.3)
 
         response = llm.invoke(prompt)
         title = response.content.strip().strip('"').strip("'")

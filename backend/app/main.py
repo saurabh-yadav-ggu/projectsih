@@ -1,11 +1,20 @@
 import os
+import sys
 import logging
+import asyncio
+
+if sys.platform == "win32":
+    try:
+        asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+    except Exception:
+        pass
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.database import init_db
-from app.routers import auth, threads, chat, memory, upload, documents
+from app.routers import auth, threads, chat, memory, upload, documents, skills
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -49,6 +58,7 @@ app.include_router(chat.router)
 app.include_router(memory.router)
 app.include_router(upload.router)
 app.include_router(documents.router)
+app.include_router(skills.router)
 
 
 @app.get("/")

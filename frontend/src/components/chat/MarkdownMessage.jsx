@@ -214,8 +214,8 @@ export default function MarkdownMessage({ content = '' }) {
           blockquote({ children }) {
             return (
               <blockquote style={{
-                borderLeft: '3px solid #f97316',
-                backgroundColor: 'rgba(249, 115, 22, 0.05)',
+                borderLeft: '3px solid #1d4ed8',
+                backgroundColor: 'rgba(29, 78, 216, 0.08)',
                 padding: '10px 16px',
                 borderRadius: '0 8px 8px 0',
                 margin: '14px 0',
@@ -277,10 +277,21 @@ export default function MarkdownMessage({ content = '' }) {
             );
           },
           a({ href, children }) {
+            let finalHref = href || '';
+            const isDownloadLink = finalHref.includes('/api/documents/download');
+
+            if (isDownloadLink) {
+              const token = localStorage.getItem('token');
+              if (token && !finalHref.includes('token=')) {
+                finalHref += (finalHref.includes('?') ? '&' : '?') + `token=${encodeURIComponent(token)}`;
+              }
+            }
+
             return (
               <a
-                href={href}
-                target="_blank"
+                href={finalHref}
+                download={isDownloadLink ? true : undefined}
+                target={isDownloadLink ? undefined : "_blank"}
                 rel="noopener noreferrer"
                 style={{
                   color: '#38bdf8',

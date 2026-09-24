@@ -41,14 +41,14 @@ export async function deleteThread(token, threadId) {
   return true;
 }
 
-export async function sendMessage(token, threadId, message) {
+export async function sendMessage(token, threadId, message, imagePath = null) {
   const res = await fetch(`${API_BASE_URL}/api/chat`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`
     },
-    body: JSON.stringify({ thread_id: threadId, message })
+    body: JSON.stringify({ thread_id: threadId, message, image_path: imagePath || null })
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.detail || 'Failed to send message');
@@ -59,7 +59,21 @@ export async function sendMessageStream(
   token,
   threadId,
   message,
-  { onInit, onToken, onToolStart, onToolEnd, onDone, onError, onAbort, signal } = {}
+  {
+    onInit,
+    onToken,
+    onPlan,
+    onSubagentStart,
+    onSubagentResult,
+    onToolStart,
+    onToolEnd,
+    onArtifactCreated,
+    onVerification,
+    onDone,
+    onError,
+    onAbort,
+    signal
+  } = {}
 ) {
   try {
     const res = await fetch(`${API_BASE_URL}/api/chat/stream`, {
@@ -104,10 +118,20 @@ export async function sendMessageStream(
             onInit(data);
           } else if (data.type === 'token' && onToken) {
             onToken(data.content);
+          } else if (data.type === 'plan' && onPlan) {
+            onPlan(data.plan);
+          } else if (data.type === 'subagent_start' && onSubagentStart) {
+            onSubagentStart(data);
+          } else if (data.type === 'subagent_result' && onSubagentResult) {
+            onSubagentResult(data);
           } else if (data.type === 'tool_start' && onToolStart) {
             onToolStart(data);
           } else if (data.type === 'tool_end' && onToolEnd) {
             onToolEnd(data);
+          } else if (data.type === 'artifact_created' && onArtifactCreated) {
+            onArtifactCreated(data);
+          } else if (data.type === 'verification' && onVerification) {
+            onVerification(data);
           } else if (data.type === 'done' && onDone) {
             onDone(data);
           } else if (data.type === 'error' && onError) {

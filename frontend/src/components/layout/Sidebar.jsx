@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { 
-  ShieldCheck, Plus, Filter, Download, LayoutTemplate, Settings, Command, Trash2, MessageSquare, FileText
+  ShieldCheck, Plus, Filter, Download, LayoutTemplate, Settings, Command, Trash2, MessageSquare, FileText, Sparkles, FolderDown
 } from 'lucide-react';
 
 export default function Sidebar({ 
@@ -13,7 +13,9 @@ export default function Sidebar({
   onSelectThread,
   onNewThread,
   onDeleteThread,
-  onUploadDocument
+  onUploadDocument,
+  onOpenSkills,
+  onOpenGenerated
 }) {
   const sidebarFileInputRef = useRef(null);
 
@@ -39,7 +41,7 @@ export default function Sidebar({
         type="file" 
         ref={sidebarFileInputRef} 
         style={{ display: 'none' }} 
-        accept=".pdf,.txt,.md,.png,.jpg,.jpeg,.webp"
+        accept=".pdf,.txt,.md,.docx,.csv,.png,.jpg,.jpeg,.webp"
         onChange={handleFileChange}
       />
 
@@ -111,15 +113,30 @@ export default function Sidebar({
             {item}
           </div>
         ))}
-        <div style={{ padding: '8px 12px', fontSize: '14px', color: '#d1d5db', cursor: 'pointer', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }} className="nav-item">
-          <span>Skills</span>
+        <div 
+          onClick={onOpenSkills}
+          style={{ padding: '8px 12px', fontSize: '14px', color: '#d1d5db', cursor: 'pointer', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }} 
+          className="nav-item"
+          title="Browse, inspect, and add custom agent skills"
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Sparkles size={16} color="var(--accent-orange)" />
+            <span>Skills</span>
+          </div>
           <span style={{ fontSize: '10px', fontWeight: '600', color: 'var(--accent-green)', border: '1px solid var(--accent-green)', padding: '2px 6px', borderRadius: '4px' }}>LIVE v4.2</span>
         </div>
-        {['Coding', 'Customize'].map(item => (
-          <div key={item} style={{ padding: '8px 12px', fontSize: '14px', color: '#d1d5db', cursor: 'pointer', borderRadius: '6px' }} className="nav-item">
-            {item}
+        <div 
+          onClick={onOpenGenerated}
+          style={{ padding: '8px 12px', fontSize: '14px', color: '#d1d5db', cursor: 'pointer', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }} 
+          className="nav-item"
+          title="Browse, download, and delete generated sandbox documents"
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <FolderDown size={16} color="var(--accent-orange)" />
+            <span>Generated Files</span>
           </div>
-        ))}
+          <span style={{ fontSize: '10px', fontWeight: '600', color: '#93c5fd', border: '1px solid rgba(59, 130, 246, 0.4)', padding: '2px 6px', borderRadius: '4px', backgroundColor: 'rgba(59, 130, 246, 0.1)' }}>FILES</span>
+        </div>
       </div>
 
       {/* Recent Section */}
@@ -228,16 +245,7 @@ export default function Sidebar({
             </button>
           </div>
         )}
-        <div style={{ padding: '0 24px 12px' }}>
-          <div style={{ 
-            width: '32px', height: '32px', 
-            borderRadius: '6px', 
-            backgroundColor: 'var(--bg-button)', 
-            display: 'flex', alignItems: 'center', justifyContent: 'center' 
-          }}>
-            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--accent-green)' }} />
-          </div>
-        </div>
+
         <div style={{ 
           padding: '16px 24px', 
           borderTop: '1px solid var(--border-color)',
@@ -251,8 +259,8 @@ export default function Sidebar({
               width: '32px', 
               height: '32px', 
               borderRadius: '8px', 
-              backgroundColor: '#3b2f21', 
-              color: 'var(--accent-orange)',
+              backgroundColor: '#172554', 
+              color: '#60a5fa',
               display: 'flex', 
               alignItems: 'center', 
               justifyContent: 'center',

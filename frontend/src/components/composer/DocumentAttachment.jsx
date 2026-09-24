@@ -9,7 +9,7 @@ export default function DocumentAttachment({ attachment, onRemove, onRetry }) {
     switch (attachment.status) {
       case 'uploading':
         return (
-          <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#f97316', fontSize: '11px' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#3b82f6', fontSize: '11px' }}>
             <Loader2 size={12} className="animate-spin" style={{ animation: 'spin 1s linear infinite' }} />
             Uploading {attachment.progress ? `${attachment.progress}%` : ''}
           </span>
@@ -42,7 +42,7 @@ export default function DocumentAttachment({ attachment, onRemove, onRetry }) {
   const getIcon = () => {
     if (isPdf) return <FileText size={18} style={{ color: '#ef4444' }} />;
     if (isCodeOrTxt) return <FileCode size={18} style={{ color: '#38bdf8' }} />;
-    return <File size={18} style={{ color: '#f97316' }} />;
+    return <File size={18} style={{ color: '#3b82f6' }} />;
   };
 
   const fileTypeLabel = isPdf ? 'PDF' : (attachment.name.split('.').pop() || 'DOC').toUpperCase();
@@ -52,8 +52,8 @@ export default function DocumentAttachment({ attachment, onRemove, onRetry }) {
       display: 'flex',
       alignItems: 'center',
       gap: '10px',
-      backgroundColor: '#161922',
-      border: `1px solid ${attachment.status === 'error' ? 'rgba(239, 68, 68, 0.4)' : '#262a3a'}`,
+      backgroundColor: '#0a0a0d',
+      border: `1px solid ${attachment.status === 'error' ? 'rgba(239, 68, 68, 0.4)' : '#1a1a20'}`,
       borderRadius: '10px',
       padding: '8px 12px',
       minWidth: '200px',
@@ -117,7 +117,7 @@ export default function DocumentAttachment({ attachment, onRemove, onRetry }) {
             style={{
               padding: '4px',
               borderRadius: '6px',
-              color: '#f97316',
+              color: '#3b82f6',
               cursor: 'pointer'
             }}
             title="Retry upload"

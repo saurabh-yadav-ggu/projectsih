@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, Mic, ArrowUp, Square, Paperclip } from 'lucide-react';
 import ModeSelector from './ModeSelector';
-import ModelSelector from './ModelSelector';
 import AttachmentMenu from './AttachmentMenu';
 
 export default function ComposerToolbar({
@@ -39,12 +38,12 @@ export default function ComposerToolbar({
             width: '34px',
             height: '34px',
             borderRadius: '10px',
-            backgroundColor: attachmentCount > 0 ? 'rgba(249, 115, 22, 0.15)' : '#181b26',
-            border: `1px solid ${attachmentCount > 0 ? 'rgba(249, 115, 22, 0.4)' : '#282c3f'}`,
+            backgroundColor: attachmentCount > 0 ? 'rgba(29, 78, 216, 0.2)' : '#121215',
+            border: `1px solid ${attachmentCount > 0 ? 'rgba(29, 78, 216, 0.5)' : '#23242a'}`,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: attachmentCount > 0 ? '#f97316' : '#94a3b8',
+            color: attachmentCount > 0 ? '#3b82f6' : '#94a3b8',
             cursor: 'pointer',
             position: 'relative',
             transition: 'all 0.15s ease'
@@ -56,8 +55,8 @@ export default function ComposerToolbar({
               position: 'absolute',
               top: '-4px',
               right: '-4px',
-              backgroundColor: '#f97316',
-              color: '#000',
+              backgroundColor: '#1d4ed8',
+              color: '#ffffff',
               fontSize: '10px',
               fontWeight: '700',
               borderRadius: '50%',
@@ -85,8 +84,6 @@ export default function ComposerToolbar({
 
       {/* Right Toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <ModelSelector />
-
         {/* Voice Button */}
         <button
           onClick={handleMicClick}
@@ -120,18 +117,18 @@ export default function ComposerToolbar({
               width: '34px',
               height: '34px',
               borderRadius: '10px',
-              backgroundColor: '#181b26',
-              border: '1px solid #f97316',
-              color: '#f97316',
+              backgroundColor: '#121215',
+              border: '1px solid #1d4ed8',
+              color: '#3b82f6',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
               transition: 'all 0.15s ease',
-              boxShadow: '0 0 14px rgba(249, 115, 22, 0.4)'
+              boxShadow: '0 0 14px rgba(29, 78, 216, 0.4)'
             }}
           >
-            <Square size={13} fill="#f97316" />
+            <Square size={13} fill="#1d4ed8" />
           </button>
         ) : (
           <button
@@ -144,15 +141,15 @@ export default function ComposerToolbar({
               width: '34px',
               height: '34px',
               borderRadius: '10px',
-              backgroundColor: canSend ? '#f97316' : '#1e2235',
-              color: canSend ? '#0f1117' : '#64748b',
+              backgroundColor: canSend ? '#1d4ed8' : '#141418',
+              color: canSend ? '#ffffff' : '#64748b',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               border: 'none',
               cursor: canSend ? 'pointer' : 'not-allowed',
               transition: 'all 0.15s ease',
-              boxShadow: canSend ? '0 2px 10px rgba(249, 115, 22, 0.3)' : 'none'
+              boxShadow: canSend ? '0 2px 10px rgba(29, 78, 216, 0.4)' : 'none'
             }}
           >
             <ArrowUp size={18} strokeWidth={2.5} />

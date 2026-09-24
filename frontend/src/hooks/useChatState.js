@@ -181,11 +181,15 @@ export function useChatState({ token, onUploadError }) {
     // 1. Upload attachments if present
     const currentAttachments = [...attachments];
     let uploadFailed = false;
+    let detectedImagePath = null;
 
     if (currentAttachments.length > 0) {
       for (const att of currentAttachments) {
         try {
-          await uploadDocument(token, att.file, currentTId);
+          const uploadRes = await uploadDocument(token, att.file, currentTId);
+          if (uploadRes && (uploadRes.is_image || (att.file && att.file.type && att.file.type.startsWith('image/')))) {
+            detectedImagePath = uploadRes.file_path;
+          }
         } catch (err) {
           console.error(`Failed to upload ${att.name}:`, err);
           uploadFailed = true;
@@ -263,6 +267,7 @@ export function useChatState({ token, onUploadError }) {
       token,
       threadId: currentTId,
       message: promptMessageText,
+      imagePath: detectedImagePath,
       onInit: (data) => {
         if (data.thread_id && !activeThreadIdRef.current) {
           setActiveThreadId(data.thread_id);
@@ -271,6 +276,69 @@ export function useChatState({ token, onUploadError }) {
       onToken: (chunk) => {
         pendingTokenBuffer += chunk;
         scheduleFlush();
+      },
+      onPlan: (planData) => {
+        setMessages(prev => prev.map(m => {
+          if (m.id === assistantMsgId) {
+            return { ...m, plan: planData };
+          }
+          return m;
+        }));
+      },
+      onSubagentStart: (subagentData) => {
+        setMessages(prev => prev.map(m => {
+          if (m.id === assistantMsgId) {
+            const steps = m.pipelineSteps || [];
+            return {
+              ...m,
+              pipelineSteps: [...steps, {
+                id: generateId('step'),
+                agent: subagentData.agent,
+                status: 'running',
+                timestamp: Date.now()
+              }]
+            };
+          }
+          return m;
+        }));
+      },
+      onSubagentResult: (subagentData) => {
+        setMessages(prev => prev.map(m => {
+          if (m.id === assistantMsgId) {
+            const steps = (m.pipelineSteps || []).map(s => {
+              if (s.agent === subagentData.agent && s.status === 'running') {
+                return { ...s, status: 'completed' };
+              }
+              return s;
+            });
+            return { ...m, pipelineSteps: steps };
+          }
+          return m;
+        }));
+      },
+      onArtifactCreated: (artData) => {
+        setMessages(prev => prev.map(m => {
+          if (m.id === assistantMsgId) {
+            const artifacts = m.artifacts || [];
+            const exists = artifacts.some(a => a.path === artData.path);
+            return {
+              ...m,
+              artifacts: exists ? artifacts : [...artifacts, artData]
+            };
+          }
+          return m;
+        }));
+      },
+      onVerification: (verData) => {
+        setMessages(prev => prev.map(m => {
+          if (m.id === assistantMsgId) {
+            return {
+              ...m,
+              verification: verData
+            };
+          }
+          return m;
+        }));
       },
       onToolStart: (toolData) => {
         if (flushRafId) {
@@ -315,9 +383,17 @@ export function useChatState({ token, onUploadError }) {
         const finalMsg = doneData.message || (pendingTokenBuffer ? undefined : null);
         setMessages(prev => prev.map(m => {
           if (m.id === assistantMsgId) {
+            const updatedTools = (m.toolCalls || []).map(tc =>
+              tc.status === 'running' ? { ...tc, status: 'completed' } : tc
+            );
+            const updatedSteps = (m.pipelineSteps || []).map(ps =>
+              ps.status === 'running' ? { ...ps, status: 'completed' } : ps
+            );
             return {
               ...m,
               content: finalMsg !== undefined && finalMsg !== null ? finalMsg : (m.content + pendingTokenBuffer),
+              toolCalls: updatedTools,
+              pipelineSteps: updatedSteps,
               status: 'COMPLETED'
             };
           }
@@ -337,11 +413,19 @@ export function useChatState({ token, onUploadError }) {
         console.error('Stream error:', err);
         setMessages(prev => prev.map(m => {
           if (m.id === assistantMsgId) {
+            const updatedTools = (m.toolCalls || []).map(tc =>
+              tc.status === 'running' ? { ...tc, status: 'error' } : tc
+            );
+            const updatedSteps = (m.pipelineSteps || []).map(ps =>
+              ps.status === 'running' ? { ...ps, status: 'error' } : ps
+            );
             return {
               ...m,
               content: accumulatedText
                 ? `${accumulatedText}\n\n*[Stream interrupted: ${err.message}]*`
                 : `Error: ${err.message}`,
+              toolCalls: updatedTools,
+              pipelineSteps: updatedSteps,
               status: 'ERROR',
               error: err.message
             };

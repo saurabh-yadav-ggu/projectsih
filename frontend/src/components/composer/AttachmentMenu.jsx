@@ -26,8 +26,8 @@ export default function AttachmentMenu({ isOpen, onClose, onSelectType }) {
       bottom: '100%',
       left: '0',
       marginBottom: '8px',
-      backgroundColor: '#181b26',
-      border: '1px solid #282c3f',
+      backgroundColor: '#0a0a0d',
+      border: '1px solid #1a1a20',
       borderRadius: '12px',
       padding: '6px',
       display: 'flex',
@@ -81,7 +81,7 @@ export default function AttachmentMenu({ isOpen, onClose, onSelectType }) {
         }}
         className="nav-item"
       >
-        <FileText size={16} style={{ color: '#f97316' }} />
+        <FileText size={16} style={{ color: '#3b82f6' }} />
         <span>Attach Document</span>
       </button>
     </div>

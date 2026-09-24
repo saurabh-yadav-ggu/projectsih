@@ -118,17 +118,17 @@ export default function ChatComposer({
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       style={{
-        width: 'calc(100% - 32px)',
-        maxWidth: '850px',
+        width: '100%',
+        maxWidth: '1080px',
         margin: '0 auto 20px auto',
-        backgroundColor: '#212121',
-        border: `1px solid ${isDragging ? '#f97316' : '#383838'}`,
+        backgroundColor: '#0a0a0d',
+        border: `1px solid ${isDragging ? '#1d4ed8' : '#222225'}`,
         borderRadius: '20px',
-        padding: '14px 18px',
+        padding: '16px 22px',
         display: 'flex',
         flexDirection: 'column',
         position: 'relative',
-        boxShadow: isDragging ? '0 0 20px rgba(249, 115, 22, 0.35)' : '0 8px 32px rgba(0, 0, 0, 0.6)',
+        boxShadow: isDragging ? '0 0 20px rgba(29, 78, 216, 0.35)' : '0 8px 32px rgba(0, 0, 0, 0.8)',
         transition: 'border 0.2s ease, box-shadow 0.2s ease',
         flexShrink: 0
       }}
@@ -138,13 +138,13 @@ export default function ChatComposer({
         <div style={{
           position: 'absolute',
           inset: 0,
-          backgroundColor: 'rgba(249, 115, 22, 0.12)',
+          backgroundColor: 'rgba(29, 78, 216, 0.15)',
           borderRadius: '20px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           gap: '10px',
-          color: '#f97316',
+          color: '#3b82f6',
           fontSize: '14px',
           fontWeight: 600,
           zIndex: 40,

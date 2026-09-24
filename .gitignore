@@ -23,6 +23,9 @@ uploads/
 backend/uploads/
 backend/app/mcp/out/
 backend/*.xlsx
+backend/*.pdf
+workspace/
+backend/workspace/
 
 # Logs
 *.log

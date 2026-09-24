@@ -6,10 +6,10 @@ export default function ModeSelector({ activeTab, setActiveTab }) {
     <div style={{
       display: 'flex',
       alignItems: 'center',
-      backgroundColor: '#10121a',
+      backgroundColor: '#0a0a0d',
       padding: '3px',
       borderRadius: '20px',
-      border: '1px solid #232736'
+      border: '1px solid #1a1a20'
     }}>
       {[
         { id: 'Chat', icon: MessageSquare },
@@ -26,7 +26,7 @@ export default function ModeSelector({ activeTab, setActiveTab }) {
               fontSize: '12.5px',
               fontWeight: 500,
               color: isSelected ? '#ffffff' : '#94a3b8',
-              backgroundColor: isSelected ? '#252938' : 'transparent',
+              backgroundColor: isSelected ? '#172554' : 'transparent',
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
@@ -36,9 +36,9 @@ export default function ModeSelector({ activeTab, setActiveTab }) {
             }}
           >
             {isSelected && (
-              <div style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#f97316' }} />
+              <div style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#1d4ed8' }} />
             )}
-            <Icon size={13} style={{ color: isSelected ? '#f97316' : '#94a3b8' }} />
+            <Icon size={13} style={{ color: isSelected ? '#3b82f6' : '#94a3b8' }} />
             <span>{id}</span>
           </button>
         );

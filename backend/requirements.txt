@@ -17,5 +17,6 @@ mcp-docgen
 langgraph
 langgraph-checkpoint-sqlite
 pypdf
+langchain-mistralai
 python-dotenv
 requests

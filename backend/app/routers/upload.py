@@ -27,7 +27,7 @@ async def upload_document(
     Upload a document (.pdf, .txt, .md) or image (.png, .jpg, .jpeg, .webp)
     associated with a thread_id for RAG knowledge base & vision analysis.
     """
-    allowed_extensions = [".pdf", ".txt", ".md", ".png", ".jpg", ".jpeg", ".webp"]
+    allowed_extensions = [".pdf", ".txt", ".md", ".docx", ".csv", ".png", ".jpg", ".jpeg", ".webp"]
     filename = file.filename or "uploaded_file.txt"
     ext = os.path.splitext(filename)[1].lower()
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Copy, Check, RotateCw, Pencil, AlertCircle } from 'lucide-react';
+import { Copy, Check, RotateCw, Pencil, AlertCircle, ThumbsDown, Upload, MoreHorizontal } from 'lucide-react';
 
 export default function MessageActions({
   role = 'assistant',
@@ -11,6 +11,15 @@ export default function MessageActions({
   isLast = false
 }) {
   const [copied, setCopied] = useState(false);
+  const [disliked, setDisliked] = useState(false);
+  const [shared, setShared] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+
+  const isUser = role === 'user';
+  const isStreaming = status === 'STREAMING';
+  const isError = status === 'ERROR';
+
+  if (isStreaming) return null;
 
   const handleCopy = () => {
     if (!content) return;
@@ -19,113 +28,193 @@ export default function MessageActions({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const isUser = role === 'user';
-  const isStreaming = status === 'STREAMING';
-  const isError = status === 'ERROR';
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator.share({ title: 'Shield AI Message', text: content }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(content);
+      setShared(true);
+      setTimeout(() => setShared(false), 2000);
+    }
+  };
 
-  if (isStreaming) return null;
+  const iconBtnStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '28px',
+    height: '28px',
+    borderRadius: '6px',
+    backgroundColor: 'transparent',
+    border: 'none',
+    color: '#71717a',
+    cursor: 'pointer',
+    transition: 'color 0.15s ease, background-color 0.15s ease'
+  };
 
   return (
     <div style={{
       display: 'flex',
       alignItems: 'center',
-      gap: '6px',
+      gap: '4px',
       marginTop: '6px',
-      fontSize: '12px',
-      color: '#64748b'
+      color: '#71717a',
+      position: 'relative'
     }}>
-      {/* Copy Action */}
-      <button
-        type="button"
-        onClick={handleCopy}
-        title={copied ? 'Copied to clipboard' : 'Copy message'}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '4px',
-          padding: '3px 7px',
-          borderRadius: '5px',
-          backgroundColor: copied ? 'rgba(34, 197, 94, 0.12)' : 'rgba(255, 255, 255, 0.04)',
-          border: `1px solid ${copied ? 'rgba(34, 197, 94, 0.3)' : 'rgba(255, 255, 255, 0.07)'}`,
-          color: copied ? '#4ade80' : '#94a3b8',
-          cursor: 'pointer',
-          transition: 'all 0.15s ease'
-        }}
-      >
-        {copied ? <Check size={12} /> : <Copy size={12} />}
-        <span>{copied ? 'Copied' : 'Copy'}</span>
-      </button>
+      {isUser ? (
+        /* User actions: Copy, Share, Edit */
+        <>
+          <button
+            type="button"
+            onClick={handleCopy}
+            title={copied ? 'Copied' : 'Copy'}
+            style={iconBtnStyle}
+            onMouseEnter={e => { e.currentTarget.style.color = '#cbd5e1'; e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)'; }}
+            onMouseLeave={e => { e.currentTarget.style.color = '#71717a'; e.currentTarget.style.backgroundColor = 'transparent'; }}
+          >
+            {copied ? <Check size={14} style={{ color: '#4ade80' }} /> : <Copy size={14} />}
+          </button>
 
-      {/* User Edit Action */}
-      {isUser && onEdit && (
-        <button
-          type="button"
-          onClick={onEdit}
-          title="Edit prompt"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-            padding: '3px 7px',
-            borderRadius: '5px',
-            backgroundColor: 'rgba(255, 255, 255, 0.04)',
-            border: '1px solid rgba(255, 255, 255, 0.07)',
-            color: '#94a3b8',
-            cursor: 'pointer',
-            transition: 'all 0.15s ease'
-          }}
-        >
-          <Pencil size={12} />
-          <span>Edit</span>
-        </button>
-      )}
+          <button
+            type="button"
+            onClick={handleShare}
+            title={shared ? 'Link copied' : 'Share'}
+            style={iconBtnStyle}
+            onMouseEnter={e => { e.currentTarget.style.color = '#cbd5e1'; e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)'; }}
+            onMouseLeave={e => { e.currentTarget.style.color = '#71717a'; e.currentTarget.style.backgroundColor = 'transparent'; }}
+          >
+            {shared ? <Check size={14} style={{ color: '#4ade80' }} /> : <Upload size={14} />}
+          </button>
 
-      {/* Assistant Regenerate Action (shown on last assistant message or completed) */}
-      {!isUser && !isError && onRegenerate && isLast && (
-        <button
-          type="button"
-          onClick={onRegenerate}
-          title="Regenerate response"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-            padding: '3px 7px',
-            borderRadius: '5px',
-            backgroundColor: 'rgba(255, 255, 255, 0.04)',
-            border: '1px solid rgba(255, 255, 255, 0.07)',
-            color: '#94a3b8',
-            cursor: 'pointer',
-            transition: 'all 0.15s ease'
-          }}
-        >
-          <RotateCw size={12} />
-          <span>Regenerate</span>
-        </button>
-      )}
+          {onEdit && (
+            <button
+              type="button"
+              onClick={onEdit}
+              title="Edit message"
+              style={iconBtnStyle}
+              onMouseEnter={e => { e.currentTarget.style.color = '#cbd5e1'; e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)'; }}
+              onMouseLeave={e => { e.currentTarget.style.color = '#71717a'; e.currentTarget.style.backgroundColor = 'transparent'; }}
+            >
+              <Pencil size={14} />
+            </button>
+          )}
+        </>
+      ) : (
+        /* Assistant actions: Copy, ThumbsDown, Share, Regenerate, More */
+        <>
+          <button
+            type="button"
+            onClick={handleCopy}
+            title={copied ? 'Copied' : 'Copy'}
+            style={iconBtnStyle}
+            onMouseEnter={e => { e.currentTarget.style.color = '#cbd5e1'; e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)'; }}
+            onMouseLeave={e => { e.currentTarget.style.color = '#71717a'; e.currentTarget.style.backgroundColor = 'transparent'; }}
+          >
+            {copied ? <Check size={14} style={{ color: '#4ade80' }} /> : <Copy size={14} />}
+          </button>
 
-      {/* Assistant Retry Action (shown on error) */}
-      {!isUser && isError && onRetry && (
-        <button
-          type="button"
-          onClick={onRetry}
-          title="Retry response"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-            padding: '3px 7px',
-            borderRadius: '5px',
-            backgroundColor: 'rgba(239, 68, 68, 0.12)',
-            border: '1px solid rgba(239, 68, 68, 0.3)',
-            color: '#fca5a5',
-            cursor: 'pointer',
-            transition: 'all 0.15s ease'
-          }}
-        >
-          <AlertCircle size={12} />
-          <span>Retry</span>
-        </button>
+          <button
+            type="button"
+            onClick={() => setDisliked(!disliked)}
+            title={disliked ? 'Feedback sent' : 'Bad response'}
+            style={{
+              ...iconBtnStyle,
+              color: disliked ? '#f87171' : '#71717a'
+            }}
+            onMouseEnter={e => { if (!disliked) { e.currentTarget.style.color = '#cbd5e1'; e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)'; } }}
+            onMouseLeave={e => { if (!disliked) { e.currentTarget.style.color = '#71717a'; e.currentTarget.style.backgroundColor = 'transparent'; } }}
+          >
+            <ThumbsDown size={14} />
+          </button>
+
+          <button
+            type="button"
+            onClick={handleShare}
+            title={shared ? 'Link copied' : 'Share'}
+            style={iconBtnStyle}
+            onMouseEnter={e => { e.currentTarget.style.color = '#cbd5e1'; e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)'; }}
+            onMouseLeave={e => { e.currentTarget.style.color = '#71717a'; e.currentTarget.style.backgroundColor = 'transparent'; }}
+          >
+            {shared ? <Check size={14} style={{ color: '#4ade80' }} /> : <Upload size={14} />}
+          </button>
+
+          {onRegenerate && (
+            <button
+              type="button"
+              onClick={onRegenerate}
+              title="Regenerate response"
+              style={iconBtnStyle}
+              onMouseEnter={e => { e.currentTarget.style.color = '#cbd5e1'; e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)'; }}
+              onMouseLeave={e => { e.currentTarget.style.color = '#71717a'; e.currentTarget.style.backgroundColor = 'transparent'; }}
+            >
+              <RotateCw size={14} />
+            </button>
+          )}
+
+          <div style={{ position: 'relative' }}>
+            <button
+              type="button"
+              onClick={() => setShowMenu(!showMenu)}
+              title="More options"
+              style={iconBtnStyle}
+              onMouseEnter={e => { e.currentTarget.style.color = '#cbd5e1'; e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)'; }}
+              onMouseLeave={e => { e.currentTarget.style.color = '#71717a'; e.currentTarget.style.backgroundColor = 'transparent'; }}
+            >
+              <MoreHorizontal size={14} />
+            </button>
+            {showMenu && (
+              <div style={{
+                position: 'absolute',
+                top: '100%',
+                left: '0',
+                marginTop: '4px',
+                backgroundColor: '#121215',
+                border: '1px solid #232328',
+                borderRadius: '8px',
+                padding: '4px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '2px',
+                zIndex: 40,
+                minWidth: '130px',
+                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.6)'
+              }}>
+                <button
+                  type="button"
+                  onClick={() => { handleCopy(); setShowMenu(false); }}
+                  style={{
+                    padding: '6px 10px',
+                    fontSize: '12px',
+                    color: '#f8fafc',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    textAlign: 'left',
+                    borderRadius: '5px',
+                    cursor: 'pointer'
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.backgroundColor = '#1e1e24'}
+                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
+                  Copy Text
+                </button>
+              </div>
+            )}
+          </div>
+
+          {isError && onRetry && (
+            <button
+              type="button"
+              onClick={onRetry}
+              title="Retry response"
+              style={{
+                ...iconBtnStyle,
+                color: '#fca5a5'
+              }}
+            >
+              <AlertCircle size={14} />
+            </button>
+          )}
+        </>
       )}
     </div>
   );

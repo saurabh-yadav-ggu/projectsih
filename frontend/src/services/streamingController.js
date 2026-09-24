@@ -52,10 +52,16 @@ class StreamingController {
     token,
     threadId,
     message,
+    imagePath,
     onInit,
     onToken,
+    onPlan,
+    onSubagentStart,
+    onSubagentResult,
     onToolStart,
     onToolEnd,
+    onArtifactCreated,
+    onVerification,
     onDone,
     onError,
     onAbort
@@ -87,7 +93,8 @@ class StreamingController {
         },
         body: JSON.stringify({
           thread_id: threadId || null,
-          message
+          message,
+          image_path: imagePath || null
         }),
         signal: abortController.signal
       });
@@ -135,10 +142,20 @@ class StreamingController {
             } else if (data.type === 'token') {
               streamState.accumulatedText += data.content;
               if (onToken) onToken(data.content, streamState.accumulatedText);
+            } else if (data.type === 'plan') {
+              if (onPlan) onPlan(data.plan);
+            } else if (data.type === 'subagent_start') {
+              if (onSubagentStart) onSubagentStart(data);
+            } else if (data.type === 'subagent_result') {
+              if (onSubagentResult) onSubagentResult(data);
             } else if (data.type === 'tool_start') {
               if (onToolStart) onToolStart(data);
             } else if (data.type === 'tool_end') {
               if (onToolEnd) onToolEnd(data);
+            } else if (data.type === 'artifact_created') {
+              if (onArtifactCreated) onArtifactCreated(data);
+            } else if (data.type === 'verification') {
+              if (onVerification) onVerification(data);
             } else if (data.type === 'done') {
               streamState.status = 'COMPLETED';
               const finalMessage = data.message || streamState.accumulatedText;

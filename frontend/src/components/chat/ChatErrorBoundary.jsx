@@ -58,9 +58,9 @@ export class ChatErrorBoundary extends React.Component {
                 marginTop: '8px',
                 padding: '8px 18px',
                 borderRadius: '8px',
-                backgroundColor: '#f97316',
+                backgroundColor: '#1d4ed8',
                 border: 'none',
-                color: '#0f1117',
+                color: '#ffffff',
                 fontWeight: 600,
                 fontSize: '13px',
                 cursor: 'pointer'

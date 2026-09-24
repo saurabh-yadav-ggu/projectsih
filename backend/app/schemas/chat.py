@@ -34,6 +34,7 @@ class ChatRequest(BaseModel):
     thread_id: Optional[str] = None
     message: str = Field(..., min_length=1)
     stream: bool = False
+    image_path: Optional[str] = None
 
 
 class ChatResponse(BaseModel):

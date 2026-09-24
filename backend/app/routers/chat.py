@@ -1,5 +1,8 @@
 import json
 import logging
+import re
+from pathlib import Path
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
@@ -20,6 +23,31 @@ from app.memory import (
 logger = logging.getLogger("app.routers.chat")
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
+
+
+def _resolve_image_path(explicit_path: Optional[str], message: str) -> Optional[str]:
+    """
+    Resolves image path strictly.
+    1. Returns explicit_path if provided and valid.
+    2. Only falls back to recent upload if the user explicitly asks to analyze/describe an image.
+    """
+    if explicit_path and Path(explicit_path).exists():
+        return explicit_path
+
+    q = message.lower()
+    has_image_term = bool(re.search(r"\b(image|photo|picture|screenshot|diagram)\b", q))
+    has_inspect_term = bool(re.search(r"\b(describe|analyze|inspect|read|what is in|tell me about|extract)\b", q))
+    if has_image_term and has_inspect_term:
+        upload_dir = Path(__file__).resolve().parents[2] / "uploads"
+        if upload_dir.exists():
+            img_candidates = sorted(
+                [f for f in upload_dir.iterdir() if f.is_file() and f.suffix.lower() in [".png", ".jpg", ".jpeg", ".webp"]],
+                key=lambda f: f.stat().st_mtime,
+                reverse=True
+            )
+            if img_candidates:
+                return str(img_candidates[0].resolve())
+    return None
 
 
 @router.post("", response_model=ChatResponse)
@@ -49,17 +77,22 @@ async def chat_endpoint(
     )
     ThreadRepository.touch_thread(db, thread_id=thread.id, user_id=current_user.id)
 
-    # 3. Retrieve user memory context & thread document context
+    # 3. Retrieve user memory context & thread document context with user isolation
     memory_context = format_memories_for_prompt(db, user_id=current_user.id)
-    document_context = retrieve_context(query=body.message, k=6, thread_id=thread.id)
+    document_context = retrieve_context(query=body.message, k=6, thread_id=thread.id, user_id=current_user.id)
 
-    # 4. Invoke LangGraph ReAct Agent with AsyncSqliteSaver checkpointer
+    # 4. Resolve image context if provided or explicitly requested
+    image_path = _resolve_image_path(body.image_path, body.message)
+
+    # 5. Invoke Supervisor Deep Agent
     try:
         response_content = await run_agent_query(
             message=body.message,
             thread_id=thread.id,
             memory_context=memory_context,
-            document_context=document_context
+            document_context=document_context,
+            user_id=current_user.id,
+            image_path=image_path,
         )
     except Exception as e:
         logger.error(f"Error during agent execution: {e}")
@@ -126,9 +159,12 @@ async def chat_stream_endpoint(
     )
     ThreadRepository.touch_thread(db, thread_id=thread.id, user_id=current_user.id)
 
-    # 3. Context retrieval
+    # 3. Context retrieval with user isolation
     memory_context = format_memories_for_prompt(db, user_id=current_user.id)
-    document_context = retrieve_context(query=body.message, k=6, thread_id=thread.id)
+    document_context = retrieve_context(query=body.message, k=6, thread_id=thread.id, user_id=current_user.id)
+
+    # 4. Resolve image context if provided or explicitly requested
+    stream_image_path = _resolve_image_path(body.image_path, body.message)
 
     async def event_generator():
         accumulated_text = ""
@@ -136,14 +172,21 @@ async def chat_stream_endpoint(
             # Yield initial thread ID payload
             yield f"data: {json.dumps({'type': 'init', 'thread_id': thread.id})}\n\n"
 
-            async for token in stream_agent_query(
+            async for event_item in stream_agent_query(
                 message=body.message,
                 thread_id=thread.id,
                 memory_context=memory_context,
-                document_context=document_context
+                document_context=document_context,
+                user_id=current_user.id,
+                image_path=stream_image_path,
             ):
-                accumulated_text += token
-                yield f"data: {json.dumps({'type': 'token', 'content': token})}\n\n"
+                if isinstance(event_item, dict):
+                    if event_item.get("type") == "token":
+                        accumulated_text += event_item.get("content", "")
+                    yield f"data: {json.dumps(event_item)}\n\n"
+                elif isinstance(event_item, str):
+                    accumulated_text += event_item
+                    yield f"data: {json.dumps({'type': 'token', 'content': event_item})}\n\n"
 
             # Save assistant response to DB
             if accumulated_text:
@@ -175,8 +218,9 @@ async def chat_stream_endpoint(
             yield f"data: {json.dumps({'type': 'done', 'thread_id': thread.id, 'title': final_title, 'message': accumulated_text})}\n\n"
 
         except Exception as e:
-            logger.error(f"Streaming failed: {e}")
-            yield f"data: {json.dumps({'type': 'error', 'error': str(e)})}\n\n"
+            logger.error(f"Streaming failed: {repr(e)}", exc_info=True)
+            err_msg = str(e) if str(e) else f"{type(e).__name__}: {repr(e)}"
+            yield f"data: {json.dumps({'type': 'error', 'error': err_msg})}\n\n"
 
     return StreamingResponse(
         event_generator(),

@@ -57,7 +57,7 @@ export default function ChatInput({
         type="file" 
         ref={fileInputRef} 
         style={{ display: 'none' }} 
-        accept=".pdf,.txt,.md,.png,.jpg,.jpeg,.webp"
+        accept=".pdf,.txt,.md,.docx,.csv,.png,.jpg,.jpeg,.webp"
         onChange={handleFileChange}
       />
 
@@ -133,24 +133,7 @@ export default function ChatInput({
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button style={{ 
-            display: 'flex', alignItems: 'center', gap: '8px',
-            padding: '6px 12px',
-            borderRadius: '20px',
-            backgroundColor: 'transparent',
-            color: 'var(--text-muted)',
-            fontSize: '13px',
-            border: 'none',
-            cursor: 'pointer'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ color: '#fff', fontSize: '13px', fontWeight: '500' }}>Hivemind</span>
-              <span style={{ fontSize: '11px', color: 'var(--text-muted)', border: '1px solid #333', padding: '2px 4px', borderRadius: '4px' }}>v4.2</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              Max <ChevronDown size={14} />
-            </div>
-          </button>
+
           <button style={{ color: 'var(--text-muted)', backgroundColor: 'transparent', border: 'none', cursor: 'pointer' }}>
             <Mic size={20} />
           </button>

@@ -10,11 +10,15 @@ import ChatComposer from './components/composer/ChatComposer';
 import QuickTasks from './components/chat/QuickTasks';
 import ChatMessageList from './components/chat/ChatMessageList';
 import ChatErrorBoundary from './components/chat/ChatErrorBoundary';
+import SkillsModal from './components/skills/SkillsModal';
+import GeneratedFilesModal from './components/documents/GeneratedFilesModal';
 import { useAttachments } from './hooks/useAttachments';
 import { useChatState } from './hooks/useChatState';
 
 function AppContent() {
   const [activeTab, setActiveTab] = useState('Chat');
+  const [showSkillsModal, setShowSkillsModal] = useState(false);
+  const [showGeneratedModal, setShowGeneratedModal] = useState(false);
   const [token, setToken] = useState(localStorage.getItem('token') || null);
   const [user, setUser] = useState(null);
   const [authMode, setAuthMode] = useState('login');
@@ -192,6 +196,8 @@ function AppContent() {
         onNewThread={handleNewThread}
         onDeleteThread={handleDeleteThread}
         onUploadDocument={handleUploadDocumentDirect}
+        onOpenSkills={() => setShowSkillsModal(true)}
+        onOpenGenerated={() => setShowGeneratedModal(true)}
       />
 
       {/* MAIN CONTENT AREA */}
@@ -205,7 +211,7 @@ function AppContent() {
             top: '64px',
             left: '50%',
             transform: 'translateX(-50%)',
-            backgroundColor: '#181b26',
+            backgroundColor: '#0a0a0d',
             border: '1px solid #ef4444',
             color: '#fca5a5',
             padding: '6px 14px',
@@ -228,8 +234,8 @@ function AppContent() {
             top: '70px',
             left: '50%',
             transform: 'translateX(-50%)',
-            backgroundColor: '#181b26',
-            border: '1px solid #f97316',
+            backgroundColor: '#0a0a0d',
+            border: '1px solid #1d4ed8',
             color: '#fff',
             padding: '8px 16px',
             borderRadius: '20px',
@@ -258,12 +264,13 @@ function AppContent() {
               alignItems: 'center',
               justifyContent: 'center',
               width: '100%',
-              maxWidth: '850px',
+              maxWidth: '1080px',
+              padding: '0 20px',
               marginBottom: '20px'
             }}>
               {/* Logo & Heading */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '32px' }}>
-                <ShieldCheck size={36} color="#f97316" strokeWidth={2} />
+                <ShieldCheck size={36} color="#1d4ed8" strokeWidth={2} />
                 <h1 style={{
                   fontFamily: 'var(--font-serif, serif)',
                   fontSize: '40px',
@@ -316,7 +323,7 @@ function AppContent() {
                 />
               </ChatErrorBoundary>
 
-              <div style={{ width: '100%', display: 'flex', justifyContent: 'center', paddingTop: '10px' }}>
+              <div style={{ width: '100%', display: 'flex', justifyContent: 'center', paddingTop: '10px', paddingLeft: '20px', paddingRight: '20px' }}>
                 <ChatComposer
                   inputValue={inputValue}
                   setInputValue={setInputValue}
@@ -335,6 +342,27 @@ function AppContent() {
           )}
         </div>
       </div>
+
+      {/* AGENT SKILLS & CAPABILITIES MODAL */}
+      <SkillsModal
+        token={token}
+        isOpen={showSkillsModal}
+        onClose={() => setShowSkillsModal(false)}
+        onUseSkillInChat={(prompt) => {
+          setInputValue(prompt);
+          const activeComposerInput = document.querySelector('textarea');
+          if (activeComposerInput) {
+            setTimeout(() => activeComposerInput.focus(), 100);
+          }
+        }}
+      />
+
+      {/* GENERATED DOCUMENTS & DELIVERABLES MODAL */}
+      <GeneratedFilesModal
+        token={token}
+        isOpen={showGeneratedModal}
+        onClose={() => setShowGeneratedModal(false)}
+      />
     </div>
   );
 }
