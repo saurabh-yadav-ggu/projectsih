@@ -12,14 +12,17 @@ from app.agent.content_planner import plan_and_generate_content
 from app.mcp import OUTPUT_DIR
 
 from app.services.skill_manager import skill_manager
+from app.core.json_utils import extract_clean_topic
 
 logger = logging.getLogger("app.agent.subagents.document")
 
 
 def _suggest_filename(query: str, doc_format: str, title: Optional[str] = None) -> str:
     source = title or query
-    source = re.sub(r"^(create|generate|make|build)\s+(a|an|the)?\s*", "", source, flags=re.IGNORECASE)
-    cleaned = re.sub(r"[^a-zA-Z0-9_\-]", "_", source[:40].strip())
+    clean_topic = extract_clean_topic(source)
+    target = clean_topic if clean_topic else source
+    target = re.sub(r"^(create|generate|make|build|write)\s+(a|an|the)?\s*", "", target, flags=re.IGNORECASE)
+    cleaned = re.sub(r"[^a-zA-Z0-9_\-]", "_", target[:40].strip())
     cleaned = re.sub(r"_+", "_", cleaned).strip("_").lower() or "document"
     return f"{cleaned}.{doc_format}"
 
@@ -436,6 +439,8 @@ async def run_document_agent(
                 "size": target_path.stat().st_size if target_path.exists() else 0,
             }
 
+            file_path_line = f"\n\nFilePath: {target_path.as_posix()}" if target_path.exists() else ""
+
             summary_text = (
                 f"Generated {doc_format.upper()} document: **{target_path.name}**\n"
                 f"• **Title**: {doc_title}\n"
@@ -493,8 +498,9 @@ async def run_document_agent(
     elif doc_format == "pdf":
         format_rules = (
             "STRICT REPORTLAB RULES:\n"
-            "1. Use reportlab.platypus SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle or reportlab.pdfgen.canvas.\n"
-            "2. Build the PDF directly and save to target_path.\n\n"
+            "1. Use reportlab.platypus SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak.\n"
+            "2. NEVER import 'Break' from reportlab.platypus! Use 'PageBreak' instead.\n"
+            "3. Build the PDF directly and save to target_path.\n\n"
         )
     elif doc_format == "xlsx":
         format_rules = (

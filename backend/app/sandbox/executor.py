@@ -89,6 +89,10 @@ try:
             return
         return _orig_style_add(self, style, alias)
     StyleSheet1.add = _safe_style_add
+
+    import reportlab.platypus as _rl_platypus
+    if not hasattr(_rl_platypus, "Break"):
+        _rl_platypus.Break = _rl_platypus.PageBreak
 except Exception:
     pass
 # --- End Shield Sandbox Runtime Compatibility Shims ---

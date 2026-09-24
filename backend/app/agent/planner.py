@@ -6,6 +6,7 @@ from langchain_ollama import ChatOllama
 
 from app.config import settings
 from app.core.llm import get_llm
+from app.core.json_utils import robust_json_loads
 from app.agent.prompts import PLANNER_PROMPT
 from app.agent.router import aroute_query_intent, route_query_intent
 
@@ -54,11 +55,16 @@ async def generate_execution_plan(
         content = str(response.content).strip()
 
         # Parse JSON from response
-        if "{" in content and "}" in content:
-            json_str = content[content.find("{"):content.rfind("}") + 1]
-            plan = json.loads(json_str, strict=False)
-            if not isinstance(plan, dict):
-                plan = {"intent": intent, "steps": [str(plan)]}
+        try:
+            plan = robust_json_loads(content)
+        except Exception:
+            if "{" in content and "}" in content:
+                json_str = content[content.find("{"):content.rfind("}") + 1]
+                plan = json.loads(json_str, strict=False)
+            else:
+                raise
+        if not isinstance(plan, dict):
+            plan = {"intent": intent, "steps": [str(plan)]}
             # Never downgrade specialized intent (like document) to generic chat
             if intent in ["document", "rag", "vision", "coding"]:
                 plan["intent"] = intent

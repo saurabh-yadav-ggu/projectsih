@@ -12,7 +12,9 @@ from app.agent.content_planner import (
 )
 from app.agent.subagents.document_agent import (
     _build_fallback_document,
+    _suggest_filename,
 )
+from app.core.json_utils import extract_clean_topic, robust_json_loads
 from app.agent.document_workflow.state import (
     SectionTask,
     InformationAvailability,
@@ -180,3 +182,63 @@ def test_vision_reports_honest_status_when_no_multimodal_model(tmp_path: Path):
 
     result = analyze_image(str(test_img), question="Inspect this image")
     assert "Local neural vision model is configuring in the background" not in result
+
+
+def test_ai_topic_extraction_and_domain_content_generation():
+    """Verify that 'create a pdf file on how ai works in 10 page' produces real AI domain content, not meta-spec boilerplate."""
+    query = "create a pdf file on how ai works in 10 page"
+    clean_topic = extract_clean_topic(query)
+    assert clean_topic == "How AI Works"
+
+    # Filename should be clean
+    fname = _suggest_filename(query, "pdf")
+    assert fname == "how_ai_works.pdf"
+
+    content = _build_deterministic_grounded_content(query, doc_format="pdf")
+    
+    # Title must be domain-grounded
+    assert "How AI Works" in content["title"]
+    assert "File On How Ai Works 10 Page" not in content["title"]
+
+    import json
+    content_str = json.dumps(content)
+
+    # Must NOT contain software project plan boilerplate
+    assert "Phase 1: Requirements baseline" not in content_str
+    assert "Phase 2: Core deliverable assembly" not in content_str
+    assert "Primary Scope: create a pdf file on how ai works" not in content_str
+
+    # MUST contain actual educational AI content
+    assert any("Foundations" in s["heading"] or "Artificial Intelligence" in s["heading"] for s in content["sections"])
+    assert any("Machine Learning" in s["heading"] for s in content["sections"])
+    assert any("Neural" in s["heading"] or "Transformers" in s["heading"] for s in content["sections"])
+
+    # Verify substantive technical text
+    assert any("backpropagation" in p.lower() for s in content["sections"] for p in s.get("paragraphs", []))
+    assert any("activation" in p.lower() or "attention" in p.lower() for s in content["sections"] for p in s.get("paragraphs", []))
+
+
+def test_robust_json_parsing_anomalies():
+    """Verify that robust_json_loads repairs common LLM syntax anomalies without crashing."""
+    # 1. Internal unescaped quotes
+    data1 = robust_json_loads('{"topic": "AI", "description": "Understanding "AI" algorithms and models."}')
+    assert data1["topic"] == "AI"
+    assert '"AI"' in data1["description"]
+
+    # 2. Trailing commas
+    data2 = robust_json_loads('{"sections": [{"title": "Introduction", }, ], }')
+    assert len(data2["sections"]) == 1
+
+    # 3. Python booleans and None
+    data3 = robust_json_loads('{"active": True, "value": None, "flags": [False, True]}')
+    assert data3["active"] is True
+    assert data3["value"] is None
+
+    # 4. Raw newlines inside string
+    data4 = robust_json_loads('{"text": "Paragraph line 1\nParagraph line 2"}')
+    assert "Paragraph line 1" in data4["text"]
+
+    # 5. Markdown fence with extra preamble
+    data5 = robust_json_loads('Here is the plan:\n```json\n{"status": "ok"}\n```\nHope that helps!')
+    assert data5["status"] == "ok"
+

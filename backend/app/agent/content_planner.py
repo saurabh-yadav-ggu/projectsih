@@ -5,6 +5,7 @@ from typing import Dict, Any, List, Optional
 from langchain_core.messages import SystemMessage, HumanMessage
 
 from app.core.llm import get_llm
+from app.core.json_utils import extract_clean_topic, robust_json_loads
 
 logger = logging.getLogger("app.agent.content_planner")
 
@@ -27,6 +28,10 @@ STRICT SCOPE LOCK REQUIREMENTS:
    - Unrequested sections, recommendations, financial projections, or marketing filler.
    - Fabricated statistics, invented citations, or placeholder text ("[Insert here]", "TODO", "Lorem ipsum").
    - Repetitive explanations or assumed requirements.
+
+CRITICAL CONTENT TYPE MANDATE:
+- When the user asks for a document explaining how a technology, process, or concept works (e.g. "how AI works", "how neural networks work", "guide to distributed systems"), you MUST author substantive, comprehensive educational domain chapters directly explaining that topic.
+- Do NOT generate a project proposal, deliverable schedule, software implementation roadmap, or document creation scope unless the user explicitly requested a project plan.
 
 OUTPUT FORMAT:
 You MUST return a valid JSON object matching this structure:
@@ -87,13 +92,19 @@ def _validate_and_clean_content(content: Dict[str, Any], query: str, doc_format:
     - Sanitizes placeholder tokens.
     - Ensures non-empty sections or data_table.
     """
+    clean_topic = extract_clean_topic(query) or query.strip().rstrip('.').title()
     if not isinstance(content, dict):
-        content = {"topic": query, "title": query[:40], "sections": [{"heading": "Overview", "paragraphs": [str(content)]}]}
+        content = {"topic": clean_topic, "title": clean_topic, "sections": [{"heading": "Overview", "paragraphs": [str(content)]}]}
 
-    topic = _sanitize_string(content.get("topic", "")) or query[:50]
+    topic = _sanitize_string(content.get("topic", "")) or clean_topic
+    if any(topic.lower().startswith(p) for p in ["create a", "generate a", "file on", "write a", "make a", "build a"]):
+        topic = clean_topic
+
     title = _sanitize_string(content.get("title", ""))
     if not title or title.lower() in ["business report", "generated document", "document", "report"]:
-        title = f"{query.strip().rstrip('.').title()} Deliverable"
+        title = f"{clean_topic} Deliverable"
+    elif any(title.lower().startswith(p) for p in ["file on", "create a", "generate a"]):
+        title = f"{clean_topic}: Technical Overview"
 
     subtitle = _sanitize_string(content.get("subtitle", ""))
     exec_summary = _sanitize_string(content.get("executive_summary", ""))
@@ -170,107 +181,212 @@ def _build_deterministic_grounded_content(query: str, doc_format: str, document_
     Deterministic domain synthesizer:
     If the LLM call fails or returns unparseable content, this creates a 100% topic-grounded
     structured plan derived from the user's actual query and reference context—never defaulting to
-    unrelated templates or fabricated statistics.
+    unrelated templates, meta-project boilerplate, or fabricated statistics.
     """
     clean_q = query.strip()
-    words = clean_q.split()
-    title_core = " ".join([w.capitalize() for w in words if w.lower() not in ["create", "generate", "a", "an", "the", "for", "in", "of", "with", "make", "doc", "docx", "pdf", "xlsx", "pptx", "csv"]])
-    if not title_core:
-        title_core = clean_q[:40].title()
+    clean_topic = extract_clean_topic(clean_q)
+    if not clean_topic:
+        clean_topic = clean_q[:40].title()
 
-    title = f"{title_core}: Scope Analysis & Technical Overview"
-    subtitle = ""
+    # Detect if query asks about AI / Machine Learning / Deep Learning / Neural Networks
+    q_lower = clean_q.lower()
+    is_ai_topic = any(k in q_lower for k in [
+        "how ai works", "how machine learning works", "artificial intelligence", 
+        "deep learning", "neural network", "transformer model", "llm", "ai works"
+    ]) or any(k in clean_topic.lower() for k in ["how ai works", "artificial intelligence", "machine learning"])
 
-    # Context extraction if reference docs are present
     context_snippet = ""
     if document_context:
         context_snippet = document_context[:300].strip()
 
-    sections = [
-        {
-            "heading": "1. Executive Summary & Objective",
-            "paragraphs": [
-                f"This document directly addresses the requirements outlined for {title_core}. "
-                f"It synthesizes core domain objectives, deliverable parameters, and verified requirements.",
-                context_snippet if context_snippet else f"Key objective: Deliver a structured, verified evaluation and implementation guide for {title_core}."
-            ],
-            "bullet_points": [
-                f"Primary Scope: {clean_q}",
-                "Verification Standard: Strict domain relevance and query grounding.",
-                "Target Deployment: Production and executive stakeholder review."
-            ],
-            "table": {
-                "headers": ["Scope Dimension", "Requirement Status", "Provenance"],
-                "rows": [
-                    ["Primary Topic", "DEFINED", f"Derived from query: {title_core}"],
-                    ["Reference Context", "AVAILABLE" if document_context else "NOT_AVAILABLE", "Uploaded Source Documents" if document_context else "Information unavailable from provided sources."],
-                    ["Verification Standard", "ACTIVE", "Query-grounded deterministic synthesis"]
-                ]
+    if is_ai_topic:
+        title = f"{clean_topic}: Architecture, Principles & Applications"
+        sections = [
+            {
+                "heading": "1. Foundations of Artificial Intelligence & Core Principles",
+                "paragraphs": [
+                    "Artificial Intelligence (AI) refers to the discipline of developing computational systems capable of executing cognitive tasks traditionally requiring human intelligence—including visual recognition, natural language comprehension, decision reasoning, and pattern synthesis.",
+                    "Modern AI diverges fundamentally from historical rule-based (symbolic) expert systems. Rather than executing rigid hand-crafted logic, contemporary AI relies on statistical machine learning, where mathematical models deduce decision boundaries, representations, and probability distributions directly from empirical training data."
+                ],
+                "bullet_points": [
+                    "Symbolic vs. Connectionist Paradigm: Transition from human-crafted heuristics to empirical, statistical optimization.",
+                    "Representational Learning: Multi-layered feature hierarchies discovered automatically from raw input data.",
+                    "Core Mathematical Mapping: Parametric mapping y = f(x; θ) minimizing empirical risk over dataset distributions."
+                ],
+                "table": {
+                    "headers": ["AI Dimension", "Classical Rule-Based Systems", "Modern Data-Driven AI"],
+                    "rows": [
+                        ["Decision Logic", "Hand-crafted conditional rules (if-then)", "Probabilistic inference learned from training data"],
+                        ["Feature Extraction", "Manual engineering by domain specialists", "Hierarchical latent representations in neural layers"],
+                        ["Adaptability", "Brittle when exposed to edge cases", "Continuous generalization via statistical loss minimization"]
+                    ]
+                },
+                "callout": "Foundational Principle: Contemporary AI systems are universal function approximators optimized via data-driven objective functions."
             },
-            "callout": f"Key Milestone: Successful synthesis and delivery of {title_core} assets."
-        },
-        {
-            "heading": "2. Detailed Specifications & Implementation Roadmap",
-            "paragraphs": [
-                f"Operational execution for {title_core} requires strict phase alignment, milestone tracking, and risk mitigation.",
-                "Deliverables must adhere to explicit requirements derived from verified sources."
-            ],
-            "bullet_points": [
-                "Phase 1: Requirements baseline and technical specification lock.",
-                "Phase 2: Core deliverable assembly and dynamic formatting.",
-                "Phase 3: Sandbox execution and artifact verification."
-            ],
-            "table": {
-                "headers": ["Component / Deliverable", "Requirement Source", "Availability Status"],
-                "rows": [
-                    [f"{title_core} Specifications", "User Query", "ACTIVE"],
-                    ["Domain Source Data", "Reference Context" if document_context else "Pending Source Upload", "AVAILABLE" if document_context else "REQUIRES_SOURCE"],
-                    ["Output Deliverable", "Target Document Format", "IN_PROGRESS"]
-                ]
+            {
+                "heading": "2. The Machine Learning Paradigm & Training Dynamics",
+                "paragraphs": [
+                    "At the heart of modern AI lies Machine Learning (ML), divided into three principal paradigms: supervised learning (training on labeled pairs), unsupervised learning (discovering intrinsic structures or probability distributions without explicit labels), and reinforcement learning (agents optimizing cumulative policy rewards through environment interaction).",
+                    "The learning process operates as an iterative optimization loop. Given an input batch, the model computes a forward pass to generate predictions. An objective loss function (such as Cross-Entropy or Mean Squared Error) quantifies the discrepancy between predictions and ground truth. Backpropagation utilizes the calculus chain rule to compute loss gradients relative to every model parameter, allowing optimizers such as AdamW to update weights via gradient descent."
+                ],
+                "bullet_points": [
+                    "Loss Minimization: Quantifying prediction error to iteratively steer model weights.",
+                    "Backpropagation & Chain Rule: Efficient gradient computation across millions to trillions of neural parameters.",
+                    "Optimization Algorithms: Stochastic Gradient Descent (SGD), Adam, and AdamW with adaptive learning rates."
+                ],
+                "table": {
+                    "headers": ["Paradigm", "Primary Mechanism", "Typical Objective Function / Target"],
+                    "rows": [
+                        ["Supervised Learning", "Labeled ground-truth alignment", "Cross-Entropy Loss, Mean Squared Error (MSE)"],
+                        ["Unsupervised Learning", "Latent representation & clustering", "KL-Divergence, Contrastive Loss, Reconstruction Loss"],
+                        ["Reinforcement Learning", "Policy gradient & reward optimization", "Expected Cumulative Reward, PPO Objective"]
+                    ]
+                },
+                "callout": "Optimization Engine: Backpropagation iteratively updates weights θ ← θ - η · ∇L(θ) to minimize empirical risk."
             },
-            "callout": "All milestones are tracked against strict verification criteria."
-        },
-        {
-            "heading": "3. Data & Metric Verification",
-            "paragraphs": [
-                f"Quantitative metrics, financial figures, and operational statistics for {title_core} are restricted to verified source documents.",
-                "When specific numerical values or financial budgets are not supplied in source materials, they are explicitly marked as unavailable rather than fabricated."
-            ],
-            "bullet_points": [
-                "Verification Standard: Zero fabricated statistics, synthetic estimates, or placeholder numbers.",
-                "Source Grounding: Financial metrics and quantitative parameters require verified user or document inputs."
-            ],
-            "table": {
-                "headers": ["Metric / Parameter", "Availability Status", "Source Value / Note"],
-                "rows": [
-                    ["Financial Projections", "REQUIRES_SOURCE", "Information unavailable from provided sources."],
-                    ["Quantitative Metrics", "REQUIRES_SOURCE", "Information unavailable from provided sources."],
-                    ["Domain Reference Data", "AVAILABLE" if document_context else "NOT_AVAILABLE", context_snippet[:60] if context_snippet else "Information unavailable from provided sources."]
-                ]
+            {
+                "heading": "3. Data & Metric Verification",
+                "paragraphs": [
+                    f"Quantitative metrics, benchmark evaluations, and computational budgets for {clean_topic} must adhere strictly to empirical verification.",
+                    "When specific hardware configurations, proprietary FLOPS budgets, or benchmark test scores are not provided in source materials, they are explicitly designated as requiring verified sources rather than synthetic estimations."
+                ],
+                "bullet_points": [
+                    "Verification Standard: Zero fabricated statistics, synthetic estimates, or placeholder numbers.",
+                    "Empirical Grounding: Performance metrics require verified hardware or document sources."
+                ],
+                "table": {
+                    "headers": ["Metric / Parameter", "Availability Status", "Source Value / Note"],
+                    "rows": [
+                        ["Training Compute Budget (FLOPs)", "REQUIRES_SOURCE", "Information unavailable from provided sources."],
+                        ["Quantitative Latency Benchmarks", "REQUIRES_SOURCE", "Information unavailable from provided sources."],
+                        ["Domain Reference Data", "AVAILABLE" if document_context else "NOT_AVAILABLE", context_snippet[:60] if context_snippet else "Information unavailable from provided sources."]
+                    ]
+                },
+                "callout": "Notice: Quantitative parameters and custom benchmark numbers require verified source data."
             },
-            "callout": "Notice: Numerical values and financial figures are restricted to verified source documents."
-        },
-        {
-            "heading": "4. Conclusion & Next Steps",
-            "paragraphs": [
-                f"In conclusion, the deliverable for {title_core} provides a grounded, verified structure aligned with the specified scope.",
-                "Subsequent phases depend on reviewing outputs against required domain criteria."
-            ],
-            "bullet_points": [
-                "Review deliverable specifications against stakeholder requirements.",
-                "Integrate source data when additional quantitative parameters are needed.",
-                "Monitor milestone completion via continuous artifact verification."
-            ],
-            "table": None,
-            "callout": "Action Item: Review deliverable against required specifications."
-        }
-    ]
+            {
+                "heading": "4. Neural Architectures, Transformers & Scaled Inference",
+                "paragraphs": [
+                    "Deep Learning chains layers of artificial neurons, using affine linear transformations followed by non-linear activations (GELU, SwiGLU, ReLU) to represent complex multi-modal manifolds.",
+                    "State-of-the-art foundation models utilize Transformer architectures featuring multi-head self-attention. Self-attention calculates token interaction matrices in parallel across sequence lengths, enabling high-throughput distributed training on GPU/TPU clusters alongside low-latency inference optimizations such as KV-caching and INT8 quantization."
+                ],
+                "bullet_points": [
+                    "Multi-Head Self-Attention: Dynamic pairwise sequence weighting without recurrence bottlenecks.",
+                    "Hardware Acceleration: Tensor Cores executing parallel General Matrix Multiply (GEMM) operations.",
+                    "Inference Optimization: FlashAttention, KV-caching, model quantization, and speculative decoding."
+                ],
+                "table": {
+                    "headers": ["Architecture Family", "Core Architectural Mechanism", "Primary Domain Application"],
+                    "rows": [
+                        ["Convolutional Networks (CNN)", "Spatial parameter sharing via convolutional kernels", "Computer vision, image recognition & segmentation"],
+                        ["Recurrent Networks (RNN/LSTM)", "Sequential hidden state recurrence", "Time-series forecasting, legacy sequential NLP"],
+                        ["Transformer Architecture", "Multi-head scaled dot-product self-attention", "Generative LLMs, multimodal synthesis, code reasoning"]
+                    ]
+                },
+                "callout": "Architectural Shift: Transformers replace sequential recurrence with quadratic parallelized self-attention."
+            },
+            {
+                "heading": "5. Real-World Applications, Governance & Safety",
+                "paragraphs": [
+                    "Contemporary AI powers high-stakes workflows spanning healthcare diagnosis, autonomous vehicles, quantitative finance, and automated software development.",
+                    "Ensuring safe deployment necessitates rigorous alignment techniques—such as Reinforcement Learning from Human Feedback (RLHF), constitutional guardrails, retrieval-augmented grounding, and hallucination auditing."
+                ],
+                "bullet_points": [
+                    "Alignment & Guardrails: RLHF, Direct Preference Optimization (DPO), and deterministic tool sandboxing.",
+                    "Verification & Provenance: Grounding model generations in verified source documents and knowledge retrieval.",
+                    "Ethical Governance: Bias minimization, data privacy compliance, and explainability frameworks."
+                ],
+                "table": None,
+                "callout": "Safety Mandate: Robust deployment requires alignment guardrails, grounding verification, and safety auditing."
+            }
+        ]
+    else:
+        # General or Business topic
+        title = f"{clean_topic}: Strategic Analysis & Technical Overview"
+        sections = [
+            {
+                "heading": f"1. Executive Summary & Core Principles of {clean_topic}",
+                "paragraphs": [
+                    f"This document provides a structured domain evaluation and technical overview of {clean_topic}.",
+                    context_snippet if context_snippet else f"Core objective: Deliver a verified analysis of domain principles, operational mechanisms, and strategic considerations for {clean_topic}."
+                ],
+                "bullet_points": [
+                    f"Primary Domain Focus: {clean_topic}",
+                    "Verification Standard: Strict domain relevance and query grounding.",
+                    "Operational Alignment: Grounded analysis based on verified domain practices."
+                ],
+                "table": {
+                    "headers": ["Scope Dimension", "Requirement Status", "Provenance"],
+                    "rows": [
+                        ["Primary Topic", "DEFINED", f"Derived from query: {clean_topic}"],
+                        ["Reference Context", "AVAILABLE" if document_context else "NOT_AVAILABLE", "Uploaded Source Documents" if document_context else "Information unavailable from provided sources."],
+                        ["Verification Standard", "ACTIVE", "Query-grounded deterministic synthesis"]
+                    ]
+                },
+                "callout": f"Key Milestone: Comprehensive evaluation and structured delivery for {clean_topic}."
+            },
+            {
+                "heading": "2. Technical Architecture & Operational Framework",
+                "paragraphs": [
+                    f"Operational execution for {clean_topic} relies on structured methodologies, system alignment, and technical standards.",
+                    "Implementation workflows adhere to explicit requirements derived from verified domain sources."
+                ],
+                "bullet_points": [
+                    "Foundational Architecture: Establishing core operational frameworks and data pathways.",
+                    "Methodology & Integration: Standardized execution and domain integration.",
+                    "System Verification: Pre-execution validation and artifact verification."
+                ],
+                "table": {
+                    "headers": ["Component / Deliverable", "Requirement Source", "Availability Status"],
+                    "rows": [
+                        [f"{clean_topic} Specifications", "User Query", "ACTIVE"],
+                        ["Domain Source Data", "Reference Context" if document_context else "Pending Source Upload", "AVAILABLE" if document_context else "REQUIRES_SOURCE"],
+                        ["Output Deliverable", "Target Document Format", "IN_PROGRESS"]
+                    ]
+                },
+                "callout": "All milestones are tracked against strict domain verification criteria."
+            },
+            {
+                "heading": "3. Data & Metric Verification",
+                "paragraphs": [
+                    f"Quantitative metrics, financial figures, and operational statistics for {clean_topic} are restricted to verified source documents.",
+                    "When specific numerical values or financial budgets are not supplied in source materials, they are explicitly marked as unavailable rather than fabricated."
+                ],
+                "bullet_points": [
+                    "Verification Standard: Zero fabricated statistics, synthetic estimates, or placeholder numbers.",
+                    "Source Grounding: Financial metrics and quantitative parameters require verified user or document inputs."
+                ],
+                "table": {
+                    "headers": ["Metric / Parameter", "Availability Status", "Source Value / Note"],
+                    "rows": [
+                        ["Financial Projections", "REQUIRES_SOURCE", "Information unavailable from provided sources."],
+                        ["Quantitative Metrics", "REQUIRES_SOURCE", "Information unavailable from provided sources."],
+                        ["Domain Reference Data", "AVAILABLE" if document_context else "NOT_AVAILABLE", context_snippet[:60] if context_snippet else "Information unavailable from provided sources."]
+                    ]
+                },
+                "callout": "Notice: Numerical values and financial figures are restricted to verified source documents."
+            },
+            {
+                "heading": "4. Strategic Roadmap & Implementation Analysis",
+                "paragraphs": [
+                    f"In conclusion, the strategic analysis for {clean_topic} provides a grounded, verified structure aligned with domain objectives.",
+                    "Subsequent operational phases depend on reviewing outputs against required performance criteria."
+                ],
+                "bullet_points": [
+                    "Review deliverable specifications against stakeholder requirements.",
+                    "Integrate source data when additional quantitative parameters are needed.",
+                    "Monitor milestone completion via continuous artifact verification."
+                ],
+                "table": None,
+                "callout": f"Action Item: Execute operational roadmap for {clean_topic}."
+            }
+        ]
 
     data_table = {
         "sheet_name": "Scope_and_Metrics",
         "headers": ["Item / Parameter", "Data State", "Source Provenance", "Details"],
         "rows": [
-            [title_core, "AVAILABLE", "User Query", "Directly requested by user"],
+            [clean_topic, "AVAILABLE", "User Query", "Directly requested by user"],
             ["Reference Material", "AVAILABLE" if document_context else "NOT_AVAILABLE", "Uploaded Context" if document_context else "None provided", "Grounded in reference documents" if document_context else "Information unavailable from provided sources."],
             ["Financial Metrics", "REQUIRES_SOURCE", "User / Document Input", "Information unavailable from provided sources."],
         ]
@@ -282,13 +398,13 @@ def _build_deterministic_grounded_content(query: str, doc_format: str, document_
             "may_include": ["Direct implementation details"],
             "must_not_include": ["Generic fluff", "Unrequested marketing filler", "Placeholders"]
         },
-        "topic": clean_q,
+        "topic": clean_topic,
         "title": title,
-        "subtitle": subtitle,
-        "doc_type": "Strategic Report & Implementation Plan",
+        "subtitle": "",
+        "doc_type": "Strategic Report & Implementation Plan" if not is_ai_topic else "Comprehensive Technical Guide",
         "target_format": doc_format,
-        "audience": "Enterprise Stakeholders and Project Leads",
-        "executive_summary": f"Structured operational and strategic deliverable for {title_core}.",
+        "audience": "Enterprise Stakeholders and Technical Practitioners",
+        "executive_summary": f"Structured operational and strategic deliverable for {clean_topic}.",
         "sections": sections,
         "data_table": data_table,
     }
@@ -316,6 +432,7 @@ async def plan_and_generate_content(
     user_prompt += (
         "\nRemember:\n"
         "- Generate domain content strictly grounded in the user request and provided sources.\n"
+        "- When asked about how a technology/system works (e.g. AI), generate educational and technical domain sections explaining that technology.\n"
         "- NEVER fabricate statistics, financial numbers, citations, or placeholder text.\n"
         "- If specific metrics or figures are requested but not supplied in context, explicitly state: 'Information unavailable from provided sources.'\n"
         "- Output strictly valid JSON matching the specified schema."
@@ -331,22 +448,17 @@ async def plan_and_generate_content(
         response = await llm.ainvoke(messages)
         resp_text = response.content if hasattr(response, "content") else str(response)
 
-        # Extract JSON from code fences or raw output
-        json_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", resp_text, re.DOTALL)
-        if json_match:
-            raw_json = json_match.group(1)
-        else:
-            brace_start = resp_text.find("{")
-            brace_end = resp_text.rfind("}")
-            if brace_start != -1 and brace_end > brace_start:
-                raw_json = resp_text[brace_start:brace_end + 1]
-            else:
-                raw_json = resp_text
+        try:
+            parsed = robust_json_loads(resp_text)
+        except Exception:
+            # Secondary fallback extraction
+            json_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", resp_text, re.DOTALL)
+            raw_json = json_match.group(1) if json_match else resp_text
+            parsed = json.loads(raw_json)
 
-        parsed = json.loads(raw_json)
         cleaned = _validate_and_clean_content(parsed, query, doc_format)
         
-        # Verify that we have at least 2 sections with content
+        # Verify that we have at least 1 section with content or data_table
         if len(cleaned.get("sections", [])) >= 1 or cleaned.get("data_table"):
             logger.info(f"Stage A Content Planner successfully generated structured plan with {len(cleaned.get('sections', []))} sections.")
             return cleaned

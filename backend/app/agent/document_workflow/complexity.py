@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 from langchain_core.messages import SystemMessage, HumanMessage
 
 from app.core.llm import get_llm
+from app.core.json_utils import robust_json_loads
 
 logger = logging.getLogger("app.agent.document_workflow.complexity")
 
@@ -105,20 +106,23 @@ def _parse_llm_decision(raw_output: Any) -> ComplexityDecision:
     text = raw_output.content if hasattr(raw_output, "content") else str(raw_output)
     text = text.strip()
 
-    # Look for JSON code blocks or curly braces
-    json_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
-    if json_match:
-        json_str = json_match.group(1)
-    else:
-        start = text.find("{")
-        end = text.rfind("}")
-        if start != -1 and end > start:
-            json_str = text[start:end + 1]
+    try:
+        data = robust_json_loads(text)
+    except Exception:
+        # Look for JSON code blocks or curly braces
+        json_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
+        if json_match:
+            json_str = json_match.group(1)
         else:
-            json_str = text
+            start = text.find("{")
+            end = text.rfind("}")
+            if start != -1 and end > start:
+                json_str = text[start:end + 1]
+            else:
+                json_str = text
+        data = json.loads(json_str)
 
-    data = json.loads(json_str)
-    if "level" in data and isinstance(data["level"], str):
+    if isinstance(data, dict) and "level" in data and isinstance(data["level"], str):
         data["level"] = data["level"].upper().strip()
     return ComplexityDecision.model_validate(data)
 
