@@ -1,0 +1,16 @@
+services:
+  sandbox:
+    build:
+      context: ./docker/sandbox
+      dockerfile: Dockerfile
+    image: shield-ai-sandbox:latest
+    container_name: shield-ai-sandbox-base
+    init: true
+    network_mode: "none"
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2G
+    restart: "no"
+    command: ["sleep", "infinity"]

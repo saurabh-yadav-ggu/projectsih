@@ -29,7 +29,13 @@ dependencies = [
     "python-dotenv",
     "requests",
     "langgraph-checkpoint-sqlite>=3.1.1",
+    "deepagents",
+    "deepagents-code",
 ]
+
+[tool.uv.sources]
+deepagents = { path = "../deepagents/libs/deepagents", editable = true }
+deepagents-code = { path = "../deepagents/libs/code", editable = true }
 
 [tool.setuptools.packages.find]
 where = ["."]

@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { 
-  ShieldCheck, Plus, Filter, Download, LayoutTemplate, Settings, Command, Trash2, MessageSquare, FileText, Sparkles, FolderDown
+  ShieldCheck, Plus, Filter, Download, LayoutTemplate, Settings, Command, Trash2, MessageSquare, FileText, Sparkles, FolderDown, Code
 } from 'lucide-react';
 
 export default function Sidebar({ 
@@ -15,7 +15,9 @@ export default function Sidebar({
   onDeleteThread,
   onUploadDocument,
   onOpenSkills,
-  onOpenGenerated
+  onOpenGenerated,
+  activeTab = 'Chat',
+  setActiveTab
 }) {
   const sidebarFileInputRef = useRef(null);
 
@@ -96,6 +98,54 @@ export default function Sidebar({
 
       {/* Navigation Links */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', padding: '0 16px' }}>
+        <div 
+          onClick={() => setActiveTab && setActiveTab('Chat')}
+          style={{ 
+            padding: '8px 12px', 
+            fontSize: '14px', 
+            color: activeTab === 'Chat' ? '#ffffff' : '#d1d5db', 
+            backgroundColor: activeTab === 'Chat' ? 'rgba(29, 78, 216, 0.15)' : 'transparent',
+            border: activeTab === 'Chat' ? '1px solid rgba(29, 78, 216, 0.4)' : '1px solid transparent',
+            cursor: 'pointer', 
+            borderRadius: '6px', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between',
+            transition: 'all 0.15s ease'
+          }} 
+          className="nav-item"
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <MessageSquare size={16} color={activeTab === 'Chat' ? '#3b82f6' : 'var(--text-muted)'} />
+            <span>Chat Assistant</span>
+          </div>
+        </div>
+
+        <div 
+          onClick={() => setActiveTab && setActiveTab('Coding')}
+          style={{ 
+            padding: '8px 12px', 
+            fontSize: '14px', 
+            color: activeTab === 'Coding' ? '#ffffff' : '#d1d5db', 
+            backgroundColor: activeTab === 'Coding' ? 'rgba(29, 78, 216, 0.15)' : 'transparent',
+            border: activeTab === 'Coding' ? '1px solid rgba(29, 78, 216, 0.4)' : '1px solid transparent',
+            cursor: 'pointer', 
+            borderRadius: '6px', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between',
+            transition: 'all 0.15s ease'
+          }} 
+          className="nav-item"
+          title="Open Deep Agents Autonomous Coding Studio"
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Code size={16} color={activeTab === 'Coding' ? '#3b82f6' : 'var(--accent-orange)'} />
+            <span>Coding Studio</span>
+          </div>
+          <span style={{ fontSize: '10px', fontWeight: '600', color: '#93c5fd', border: '1px solid rgba(59, 130, 246, 0.4)', padding: '2px 6px', borderRadius: '4px', backgroundColor: 'rgba(59, 130, 246, 0.12)' }}>IDE</span>
+        </div>
+
         <div 
           onClick={handleDocumentsClick}
           style={{ padding: '8px 12px', fontSize: '14px', color: '#d1d5db', cursor: 'pointer', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }} 

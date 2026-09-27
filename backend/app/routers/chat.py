@@ -1,6 +1,7 @@
 import json
 import logging
 import re
+import asyncio
 from pathlib import Path
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
@@ -109,14 +110,12 @@ async def chat_endpoint(
     # 6. Schedule automated title generation and memory extraction as background tasks
     background_tasks.add_task(
         generate_and_save_title,
-        db=db,
         thread_id=thread.id,
         user_id=current_user.id,
         user_message=body.message
     )
     background_tasks.add_task(
         extract_and_save_memories,
-        db=db,
         user_id=current_user.id,
         user_message=body.message
     )
@@ -188,32 +187,35 @@ async def chat_stream_endpoint(
                     accumulated_text += event_item
                     yield f"data: {json.dumps({'type': 'token', 'content': event_item})}\n\n"
 
-            # Save assistant response to DB
-            if accumulated_text:
-                MessageRepository.add_message(
-                    db,
-                    thread_id=thread.id,
-                    role="assistant",
-                    content=accumulated_text
+            # Save assistant response to DB and trigger tasks using a fresh session
+            from app.database import SessionLocal
+            with SessionLocal() as stream_db:
+                if accumulated_text:
+                    MessageRepository.add_message(
+                        stream_db,
+                        thread_id=thread.id,
+                        role="assistant",
+                        content=accumulated_text
+                    )
+                # Trigger title generation and memory extraction reliably in background thread
+                asyncio.create_task(
+                    asyncio.to_thread(
+                        generate_and_save_title,
+                        thread_id=thread.id,
+                        user_id=current_user.id,
+                        user_message=body.message
+                    )
+                )
+                asyncio.create_task(
+                    asyncio.to_thread(
+                        extract_and_save_memories,
+                        user_id=current_user.id,
+                        user_message=body.message
+                    )
                 )
 
-            # Trigger background tasks
-            background_tasks.add_task(
-                generate_and_save_title,
-                db=db,
-                thread_id=thread.id,
-                user_id=current_user.id,
-                user_message=body.message
-            )
-            background_tasks.add_task(
-                extract_and_save_memories,
-                db=db,
-                user_id=current_user.id,
-                user_message=body.message
-            )
-
-            updated_thread = ThreadRepository.get_thread(db, thread_id=thread.id, user_id=current_user.id)
-            final_title = updated_thread.title if updated_thread else thread.title
+                updated_thread = ThreadRepository.get_thread(stream_db, thread_id=thread.id, user_id=current_user.id)
+                final_title = updated_thread.title if updated_thread else thread.title
 
             yield f"data: {json.dumps({'type': 'done', 'thread_id': thread.id, 'title': final_title, 'message': accumulated_text})}\n\n"
 

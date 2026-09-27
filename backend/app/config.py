@@ -22,6 +22,26 @@ class Settings(BaseSettings):
     MISTRAL_VISION_MODEL: str = os.getenv("MISTRAL_VISION_MODEL", "pixtral-12b-2409")
     USE_MISTRAL_API: bool = os.getenv("USE_MISTRAL_API", "true").lower() in ("true", "1", "yes")
 
+    # Docker Sandbox Configuration
+    SANDBOX_ENABLED: bool = os.getenv("SANDBOX_ENABLED", "true").lower() in ("true", "1", "yes")
+    SANDBOX_BACKEND: str = os.getenv("SANDBOX_BACKEND", "docker").lower()  # "docker" or "local"
+    SANDBOX_IMAGE: str = os.getenv("SANDBOX_IMAGE", "shield-ai-sandbox")
+    SANDBOX_NETWORK_DISABLED: bool = os.getenv("SANDBOX_NETWORK_DISABLED", "false").lower() in ("true", "1", "yes")
+    SANDBOX_CPU_LIMIT: float = float(os.getenv("SANDBOX_CPU_LIMIT", "2.0"))
+    SANDBOX_MEMORY_LIMIT: str = os.getenv("SANDBOX_MEMORY_LIMIT", "2g")
+    SANDBOX_TIMEOUT: int = int(os.getenv("SANDBOX_TIMEOUT", "120"))
+    SANDBOX_PIDS_LIMIT: int = int(os.getenv("SANDBOX_PIDS_LIMIT", "128"))
+    SANDBOX_WORKSPACE_ROOT: str = os.getenv("SANDBOX_WORKSPACE_ROOT", "./workspace")
+
+    # OCR & Scanned Document Configuration
+    OCR_ENABLED: bool = os.getenv("OCR_ENABLED", "true").lower() in ("true", "1", "yes")
+    OCR_ENGINE: str = os.getenv("OCR_ENGINE", "rapidocr").lower()  # "rapidocr", "paddleocr", "tesseract"
+    OCR_DPI: int = int(os.getenv("OCR_DPI", "300"))
+    OCR_MIN_TEXT_LENGTH: int = int(os.getenv("OCR_MIN_TEXT_LENGTH", "30"))
+    OCR_PREPROCESS: bool = os.getenv("OCR_PREPROCESS", "true").lower() in ("true", "1", "yes")
+    OCR_LANGUAGE: str = os.getenv("OCR_LANGUAGE", "eng")
+    TESSERACT_CMD: str = os.getenv("TESSERACT_CMD", "")
+
     class Config:
         env_file = ".env"
         extra = "ignore"

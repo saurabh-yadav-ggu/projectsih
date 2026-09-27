@@ -17,6 +17,7 @@ class Conversation(Base):
     # Relationships
     user = relationship("User", back_populates="conversations")
     messages = relationship("Message", back_populates="conversation", cascade="all, delete-orphan", order_by="Message.created_at.asc()")
+    coding_sessions = relationship("CodingSession", back_populates="conversation")
 
 
 class Message(Base):

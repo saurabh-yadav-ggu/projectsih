@@ -48,7 +48,7 @@ async def delegate_task(
             question=query,
         )
     elif intent == "coding":
-        ws = fs_backend.get_user_workspace(user_id) if (fs_backend and user_id) else Path("./workspace")
+        ws = (fs_backend.get_user_workspace(user_id) / "code") if (fs_backend and user_id) else Path("./workspace")
         return await run_coding_agent(
             task_description=query,
             workspace_path=ws,

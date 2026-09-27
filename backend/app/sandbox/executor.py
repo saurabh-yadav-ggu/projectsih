@@ -95,6 +95,12 @@ try:
         _rl_platypus.Break = _rl_platypus.PageBreak
 except Exception:
     pass
+
+import sys, os
+if "." not in sys.path:
+    sys.path.insert(0, ".")
+if "/workspace" not in sys.path and os.path.exists("/workspace"):
+    sys.path.insert(0, "/workspace")
 # --- End Shield Sandbox Runtime Compatibility Shims ---
 """
 
@@ -147,13 +153,15 @@ class SandboxExecutor:
             executable_code = f"{_RUNTIME_SHIMS}\n\n{code}"
             script_file.write_text(executable_code, encoding="utf-8")
 
-            # 3. Prepare sanitized environment
+            # 3. Prepare sanitized environment (including active workspace and backend root in PYTHONPATH)
+            backend_root = os.path.abspath(str(Path(__file__).resolve().parent.parent.parent))
+            ws_root = os.path.abspath(str(ws))
             safe_env = {
                 "SYSTEMROOT": os.environ.get("SYSTEMROOT", "C:\\Windows"),
                 "PATH": os.environ.get("PATH", ""),
                 "PYTHONIOENCODING": "utf-8",
                 "PYTHONUTF8": "1",
-                "PYTHONPATH": os.path.abspath(str(Path(__file__).resolve().parent.parent.parent)),
+                "PYTHONPATH": f"{ws_root}{os.pathsep}{backend_root}",
             }
             # Suppress network proxy variables
             if self.config.block_network:

@@ -33,5 +33,6 @@ def init_db():
     # Import all models to ensure they are registered on Base.metadata
     from app.models.user import User  # noqa
     from app.models.chat import Conversation, Message, LongTermMemory  # noqa
+    from app.models.coding import CodingSession, CodingApproval  # noqa
 
     Base.metadata.create_all(bind=engine)

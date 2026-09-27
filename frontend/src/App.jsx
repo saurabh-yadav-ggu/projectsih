@@ -12,6 +12,7 @@ import ChatMessageList from './components/chat/ChatMessageList';
 import ChatErrorBoundary from './components/chat/ChatErrorBoundary';
 import SkillsModal from './components/skills/SkillsModal';
 import GeneratedFilesModal from './components/documents/GeneratedFilesModal';
+import CodingWorkspace from './components/coding/CodingWorkspace';
 import { useAttachments } from './hooks/useAttachments';
 import { useChatState } from './hooks/useChatState';
 
@@ -198,12 +199,12 @@ function AppContent() {
         onUploadDocument={handleUploadDocumentDirect}
         onOpenSkills={() => setShowSkillsModal(true)}
         onOpenGenerated={() => setShowGeneratedModal(true)}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
       />
 
       {/* MAIN CONTENT AREA */}
-      <div className="main-content">
-        <TopBar />
-
+      <div className="main-content" style={activeTab === 'Coding' ? { padding: 0, overflow: 'hidden' } : undefined}>
         {/* Network Connection Warning */}
         {!isOnline && (
           <div style={{
@@ -247,100 +248,113 @@ function AppContent() {
           </div>
         )}
 
-        {/* Chat / Welcome Area */}
-        <div style={{
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: messages.length === 0 ? 'center' : 'flex-end',
-          padding: '0 24px 10px',
-          overflow: 'hidden'
-        }}>
-          {messages.length === 0 ? (
+        {activeTab === 'Coding' ? (
+          <CodingWorkspace
+            token={token}
+            user={user}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+          />
+        ) : (
+          <>
+            <TopBar activeTab={activeTab} setActiveTab={setActiveTab} />
+
+            {/* Chat / Welcome Area */}
             <div style={{
+              flex: 1,
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              justifyContent: 'center',
-              width: '100%',
-              maxWidth: '1080px',
-              padding: '0 20px',
-              marginBottom: '20px'
-            }}>
-              {/* Logo & Heading */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '32px' }}>
-                <ShieldCheck size={36} color="#1d4ed8" strokeWidth={2} />
-                <h1 style={{
-                  fontFamily: 'var(--font-serif, serif)',
-                  fontSize: '40px',
-                  fontWeight: '500',
-                  color: '#fff',
-                  letterSpacing: '-0.01em'
-                }}>
-                  What you want, we coordinate?
-                </h1>
-              </div>
-
-              {/* Central ChatGPT-style Composer */}
-              <ChatComposer
-                inputValue={inputValue}
-                setInputValue={setInputValue}
-                activeTab={activeTab}
-                setActiveTab={setActiveTab}
-                attachments={attachments}
-                onAddFiles={addFiles}
-                onRemoveAttachment={removeAttachment}
-                onRetryAttachment={handleRetryAttachment}
-                onSendMessage={handleSend}
-                onStop={stopGeneration}
-                loading={isGenerating}
-              />
-
-              {/* Quick Task Shortcuts */}
-              <QuickTasks onSelectTask={(task) => {
-                setInputValue(task);
-                handleSend(task);
-              }} />
-            </div>
-          ) : (
-            <div style={{
-              flex: 1,
-              width: '100%',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
+              justifyContent: messages.length === 0 ? 'center' : 'flex-end',
+              padding: '0 24px 10px',
               overflow: 'hidden'
             }}>
-              <ChatErrorBoundary>
-                <ChatMessageList
-                  messages={messages}
-                  loading={isGenerating}
-                  token={token}
-                  onRegenerate={regenerateResponse}
-                  onEditUserMessage={editUserMessage}
-                  onRetry={retryLastMessage}
-                />
-              </ChatErrorBoundary>
+              {messages.length === 0 ? (
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '100%',
+                  maxWidth: '1080px',
+                  padding: '0 20px',
+                  marginBottom: '20px'
+                }}>
+                  {/* Logo & Heading */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '32px' }}>
+                    <ShieldCheck size={36} color="#1d4ed8" strokeWidth={2} />
+                    <h1 style={{
+                      fontFamily: 'var(--font-serif, serif)',
+                      fontSize: '40px',
+                      fontWeight: '500',
+                      color: '#fff',
+                      letterSpacing: '-0.01em'
+                    }}>
+                      What you want, we coordinate?
+                    </h1>
+                  </div>
 
-              <div style={{ width: '100%', display: 'flex', justifyContent: 'center', paddingTop: '10px', paddingLeft: '20px', paddingRight: '20px' }}>
-                <ChatComposer
-                  inputValue={inputValue}
-                  setInputValue={setInputValue}
-                  activeTab={activeTab}
-                  setActiveTab={setActiveTab}
-                  attachments={attachments}
-                  onAddFiles={addFiles}
-                  onRemoveAttachment={removeAttachment}
-                  onRetryAttachment={handleRetryAttachment}
-                  onSendMessage={handleSend}
-                  onStop={stopGeneration}
-                  loading={isGenerating}
-                />
-              </div>
+                  {/* Central ChatGPT-style Composer */}
+                  <ChatComposer
+                    inputValue={inputValue}
+                    setInputValue={setInputValue}
+                    activeTab={activeTab}
+                    setActiveTab={setActiveTab}
+                    attachments={attachments}
+                    onAddFiles={addFiles}
+                    onRemoveAttachment={removeAttachment}
+                    onRetryAttachment={handleRetryAttachment}
+                    onSendMessage={handleSend}
+                    onStop={stopGeneration}
+                    loading={isGenerating}
+                  />
+
+                  {/* Quick Task Shortcuts */}
+                  <QuickTasks onSelectTask={(task) => {
+                    setInputValue(task);
+                    handleSend(task);
+                  }} />
+                </div>
+              ) : (
+                <div style={{
+                  flex: 1,
+                  width: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  overflow: 'hidden'
+                }}>
+                  <ChatErrorBoundary>
+                    <ChatMessageList
+                      messages={messages}
+                      loading={isGenerating}
+                      token={token}
+                      onRegenerate={regenerateResponse}
+                      onEditUserMessage={editUserMessage}
+                      onRetry={retryLastMessage}
+                    />
+                  </ChatErrorBoundary>
+
+                  <div style={{ width: '100%', display: 'flex', justifyContent: 'center', paddingTop: '10px', paddingLeft: '20px', paddingRight: '20px' }}>
+                    <ChatComposer
+                      inputValue={inputValue}
+                      setInputValue={setInputValue}
+                      activeTab={activeTab}
+                      setActiveTab={setActiveTab}
+                      attachments={attachments}
+                      onAddFiles={addFiles}
+                      onRemoveAttachment={removeAttachment}
+                      onRetryAttachment={handleRetryAttachment}
+                      onSendMessage={handleSend}
+                      onStop={stopGeneration}
+                      loading={isGenerating}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </>
+        )}
       </div>
 
       {/* AGENT SKILLS & CAPABILITIES MODAL */}

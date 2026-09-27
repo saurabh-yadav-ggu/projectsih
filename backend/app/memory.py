@@ -2,7 +2,7 @@ import json
 import logging
 import re
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
 from app.config import settings
 from app.core.llm import get_llm
@@ -52,12 +52,39 @@ def _clean_json_response(content: str) -> str:
     return cleaned.strip()
 
 
-def extract_and_save_memories(db: Session, user_id: int, user_message: str):
+def extract_and_save_memories(
+    arg1: Any = None,
+    arg2: Any = None,
+    arg3: Any = None,
+    db: Optional[Session] = None,
+    user_id: Optional[int] = None,
+    user_message: Optional[str] = None
+):
     """Background or inline non-blocking memory extraction with resilient JSON parsing."""
+    if isinstance(arg1, Session):
+        db = arg1
+        user_id = arg2
+        user_message = arg3
+    elif isinstance(arg1, int):
+        user_id = arg1
+        user_message = arg2
+        if isinstance(arg3, Session):
+            db = arg3
+
+    if not user_id or not user_message:
+        return
+
+    close_db = False
+    if db is None:
+        from app.database import SessionLocal
+        db = SessionLocal()
+        close_db = True
+
     try:
         prompts = get_prompts()
         prompt_tmpl = prompts.get("memory_extraction_prompt", "")
-        prompt = prompt_tmpl.format(message=user_message)
+        # Use replace instead of .format to avoid KeyError with unescaped JSON braces in prompt
+        prompt = prompt_tmpl.replace("{message}", str(user_message))
 
         llm = get_llm(temperature=0)
 
@@ -101,7 +128,6 @@ def extract_and_save_memories(db: Session, user_id: int, user_message: str):
                     if "key" in elem and "value" in elem:
                         items_to_process.append(elem)
                     else:
-                        # Dict mapping keys directly to values (e.g. {"user_role": "Engineer"})
                         for k, v in elem.items():
                             items_to_process.append({"key": k, "value": v})
         elif isinstance(parsed_data, dict):
@@ -137,11 +163,47 @@ def extract_and_save_memories(db: Session, user_id: int, user_message: str):
             logger.debug(f"Memory extraction ran successfully for user {user_id}; no durable memories saved.")
 
     except Exception as e:
-        logger.debug(f"Memory extraction process completed without updates: {e}")
+        logger.error(f"Memory extraction error for user {user_id}: {e}", exc_info=True)
+    finally:
+        if close_db and db is not None:
+            try:
+                db.close()
+            except Exception:
+                pass
 
 
-def generate_and_save_title(db: Session, thread_id: str, user_id: int, user_message: str):
+def generate_and_save_title(
+    arg1: Any = None,
+    arg2: Any = None,
+    arg3: Any = None,
+    arg4: Any = None,
+    db: Optional[Session] = None,
+    thread_id: Optional[str] = None,
+    user_id: Optional[int] = None,
+    user_message: Optional[str] = None
+):
     """Generate title for new thread automatically based on initial user message."""
+    if isinstance(arg1, Session):
+        db = arg1
+        thread_id = arg2
+        user_id = arg3
+        user_message = arg4
+    elif isinstance(arg1, str):
+        thread_id = arg1
+        user_id = arg2
+        user_message = arg3
+        if isinstance(arg4, Session):
+            db = arg4
+
+    if not thread_id or not user_id or not user_message:
+        return
+
+    close_db = False
+    if db is None:
+        from app.database import SessionLocal
+        db = SessionLocal()
+        close_db = True
+
     try:
         thread = ThreadRepository.get_thread(db, thread_id, user_id)
         if not thread or thread.title != "New conversation":
@@ -149,7 +211,7 @@ def generate_and_save_title(db: Session, thread_id: str, user_id: int, user_mess
 
         prompts = get_prompts()
         prompt_tmpl = prompts.get("title_generation_prompt", "")
-        prompt = prompt_tmpl.format(message=user_message)
+        prompt = prompt_tmpl.replace("{message}", str(user_message))
 
         llm = get_llm(temperature=0.3)
 
@@ -164,3 +226,9 @@ def generate_and_save_title(db: Session, thread_id: str, user_id: int, user_mess
 
     except Exception as e:
         logger.warning(f"Title generation failed: {e}")
+    finally:
+        if close_db and db is not None:
+            try:
+                db.close()
+            except Exception:
+                pass

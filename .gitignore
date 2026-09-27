@@ -26,6 +26,7 @@ backend/*.xlsx
 backend/*.pdf
 workspace/
 backend/workspace/
+backend/tests_workspace_goal_loop/
 
 # Logs
 *.log

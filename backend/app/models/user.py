@@ -19,3 +19,4 @@ class User(Base):
     # Relationships
     conversations = relationship("Conversation", back_populates="user", cascade="all, delete-orphan")
     memories = relationship("LongTermMemory", back_populates="user", cascade="all, delete-orphan")
+    coding_sessions = relationship("CodingSession", back_populates="user", cascade="all, delete-orphan")

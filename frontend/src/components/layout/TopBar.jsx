@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function TopBar() {
+export default function TopBar({ activeTab = 'Chat', setActiveTab }) {
   return (
     <div style={{ 
       padding: '24px 32px', 
@@ -18,15 +18,42 @@ export default function TopBar() {
       <div style={{ 
         display: 'flex', 
         alignItems: 'center',
-        gap: '8px',
-        backgroundColor: 'transparent',
-        padding: '6px 16px', 
+        gap: '4px',
+        backgroundColor: '#0a0a0d',
+        padding: '3px', 
         borderRadius: '20px',
-        border: '1px solid #333'
+        border: '1px solid #1a1a20'
       }}>
-        <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-muted)' }}>Chat</span>
-        <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>•</span>
-        <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--accent-orange)' }}>Coding</span>
+        <button
+          onClick={() => setActiveTab && setActiveTab('Chat')}
+          style={{
+            fontSize: '12.5px',
+            fontWeight: 500,
+            color: activeTab === 'Chat' ? '#ffffff' : '#94a3b8',
+            backgroundColor: activeTab === 'Chat' ? '#172554' : 'transparent',
+            padding: '4px 14px',
+            borderRadius: '16px',
+            cursor: 'pointer',
+            transition: 'all 0.15s ease'
+          }}
+        >
+          Chat
+        </button>
+        <button
+          onClick={() => setActiveTab && setActiveTab('Coding')}
+          style={{
+            fontSize: '12.5px',
+            fontWeight: 500,
+            color: activeTab === 'Coding' ? '#ffffff' : '#94a3b8',
+            backgroundColor: activeTab === 'Coding' ? '#172554' : 'transparent',
+            padding: '4px 14px',
+            borderRadius: '16px',
+            cursor: 'pointer',
+            transition: 'all 0.15s ease'
+          }}
+        >
+          Coding
+        </button>
       </div>
     </div>
   );

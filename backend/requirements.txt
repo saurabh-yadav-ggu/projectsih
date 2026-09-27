@@ -20,3 +20,5 @@ pypdf
 langchain-mistralai
 python-dotenv
 requests
+docker>=7.0.0
+deepagents-docker>=0.1.2
